@@ -4,6 +4,14 @@
 
 当前提供 **Windows** 桌面版。**Mac 版即将更新。**
 
+## 下载使用
+
+1. 打开 [Releases](https://github.com/Markjinli/framespace/releases/latest)
+2. 下载 `Framespace-1.0.2.exe`
+3. 双击打开，不用安装
+
+这是绿色便携版，拷到别的文件夹也能用。
+
 ## 它做什么
 
 - 扫描你指定的根目录，识别带 `hyperframes.json` 的工程
@@ -15,7 +23,7 @@
 
 它不是 Studio 的替代品，也不做像素级运动编辑。改画面仍走 Studio 或在工程里开 agent。
 
-## 运行（开发）
+## 开发
 
 需要 Node.js 22+。
 
@@ -25,18 +33,14 @@ npm install
 npm start
 ```
 
-## 打包 Windows exe
+打包 Windows exe：
 
 ```bat
 cd 1.0.2
 npm run dist
 ```
 
-输出在 `1.0.2/dist/`。也可以直接运行已打包的 `Framespace.exe`。
-
-## 版本
-
-当前桌面版在 `1.0.2`。
+输出在 `1.0.2/dist/Framespace-1.0.2.exe`。给 tag `v1.0.x` 推上去后，GitHub Actions 也会自动打 exe 并挂到 Release。
 
 ## 开源
 

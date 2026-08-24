@@ -1,0 +1,29 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install and build portable exe
+        working-directory: 1.0.2
+        run: |
+          npm ci
+          npm run dist
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: 1.0.2/dist/Framespace-*.exe
+          generate_release_notes: true
+          fail_on_unmatched_files: true
