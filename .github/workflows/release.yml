@@ -17,13 +17,12 @@ jobs:
         with:
           node-version: 22
       - name: Install and build portable exe
-        working-directory: 1.0.2
         run: |
           npm ci
           npm run dist
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          files: 1.0.2/dist/HyperFramesSpace-*.exe
+          files: dist/HyperFramesSpace-*.exe
           generate_release_notes: true
           fail_on_unmatched_files: true
