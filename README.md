@@ -7,7 +7,7 @@ HyperFrames 工作台 Windows 桌面版。
 开发：
 
 ```bat
-cd 1.0.1
+cd 1.0.2
 npm install
 npm start
 ```
@@ -15,11 +15,11 @@ npm start
 打包便携版 exe：
 
 ```bat
-cd 1.0.1
+cd 1.0.2
 npm run dist
 ```
 
-生成文件：`1.0.1/dist/Framespace-1.0.1.exe`
+生成文件：`1.0.2/dist/Framespace-1.0.2.exe`
 
 ## 用法
 
