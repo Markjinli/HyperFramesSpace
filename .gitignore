@@ -1,0 +1,10 @@
+node_modules/
+dist/
+out/
+*.log
+*.lnk
+_patch_*.js
+_fix_*.js
+_w.js
+.DS_Store
+Thumbs.db
