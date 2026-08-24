@@ -47,3 +47,7 @@ npm run dist
 本项目免费开源，欢迎使用、提 issue 和 PR。
 
 Mac 版做好后会发在本仓库。
+
+## Contributors
+
+- [ChatGPT](https://chatgpt.com)
