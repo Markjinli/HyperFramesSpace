@@ -28,7 +28,6 @@
 需要 Node.js 22+。
 
 ```bat
-cd 1.0.2
 npm install
 npm start
 ```
@@ -36,11 +35,10 @@ npm start
 打包 Windows exe：
 
 ```bat
-cd 1.0.2
 npm run dist
 ```
 
-输出在 `1.0.2/dist/HyperFramesSpace-1.0.2.exe`。给 tag `v1.0.x` 推上去后，GitHub Actions 也会自动打 exe 并挂到 Release。
+输出在 `dist/HyperFramesSpace-1.0.2.exe`。给 tag `v1.0.x` 推上去后，GitHub Actions 也会自动打 exe 并挂到 Release。
 
 ## 开源
 
