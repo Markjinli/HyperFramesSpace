@@ -24,6 +24,6 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          files: 1.0.2/dist/Framespace-*.exe
+          files: 1.0.2/dist/HyperFramesSpace-*.exe
           generate_release_notes: true
           fail_on_unmatched_files: true

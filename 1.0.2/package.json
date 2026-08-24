@@ -1,10 +1,10 @@
 {
-  "name": "framespace",
-  "productName": "Framespace",
+  "name": "hyperframesspace",
+  "productName": "HyperFramesSpace",
   "version": "1.0.2",
   "private": true,
   "description": "HyperFrames 工作台 · Windows 桌面版",
-  "author": "Framespace",
+  "author": "HyperFramesSpace",
   "main": "electron/main.cjs",
   "scripts": {
     "start": "electron .",
@@ -18,8 +18,8 @@
     "electron-builder": "^26.15.3"
   },
   "build": {
-    "appId": "local.framespace.app",
-    "productName": "Framespace",
+    "appId": "local.hyperframesspace.app",
+    "productName": "HyperFramesSpace",
     "directories": {
       "output": "dist"
     },
@@ -52,7 +52,7 @@
       "signExecutable": false
     },
     "portable": {
-      "artifactName": "Framespace-${version}.exe"
+      "artifactName": "HyperFramesSpace-${version}.exe"
     }
   }
 }

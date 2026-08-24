@@ -1,6 +1,6 @@
-# Framespace — HyperFrames 工作台功能规划
+# HyperFramesSpace — HyperFrames 工作台功能规划
 
-静态设计稿产品名：**Framespace**（帧仓）。它不是又一个代码编辑器，也不是 HyperFrames Studio 的替代品。它是一层**项目管理壳**：把散落在磁盘各处的 HyperFrames 工程收成库，在选中的工程上做调整/修改入口，并一键用 Grok Build、Codex 等 agent 把终端工作目录切到该工程。
+静态设计稿产品名：**HyperFramesSpace**。它不是又一个代码编辑器，也不是 HyperFrames Studio 的替代品。它是一层**项目管理壳**：把散落在磁盘各处的 HyperFrames 工程收成库，在选中的工程上做调整/修改入口，并一键用 Grok Build、Codex 等 agent 把终端工作目录切到该工程。
 
 本规划对齐真实工程模型，而不是通用 IDE 草图。识别一个工程靠的是目录里的 `hyperframes.json`（再加上 `index.html` / `package.json`），意图读 `BRIEF.md`，预览走 `npx hyperframes preview`，门禁走 `lint` / `check`，抽帧走 `snapshot`，交付走 `render`，环境走 `doctor`，新建走 `init`。
 
@@ -16,7 +16,7 @@
 - 改片的真实动作是：在工程目录里开 Grok Build / Codex，让 agent 读 `BRIEF.md` 和 composition，再跑 `check` / `preview` / `render`。资源管理器里找不到「在此打开 grok」。
 - `node_modules` 体积巨大；诊断（Node ≥ 22、FFmpeg、bundled Chrome）每次出问题都要重新想命令。
 
-Framespace 的工作方式：**扫目录 → 选工程 → 看状态 → 发出正确的 CLI / agent 命令**。设计稿阶段只展示/复制命令，不真正拉起进程。
+HyperFramesSpace 的工作方式：**扫目录 → 选工程 → 看状态 → 发出正确的 CLI / agent 命令**。设计稿阶段只展示/复制命令，不真正拉起进程。
 
 ---
 

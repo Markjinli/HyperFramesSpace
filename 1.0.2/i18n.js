@@ -3,7 +3,7 @@
 
   var STRINGS = {
     zh: {
-      'doc.title': 'Framespace — HyperFrames 工作台',
+      'doc.title': 'HyperFramesSpace — HyperFrames 工作台',
       'brand.subtitle': 'HyperFrames 工作台',
       'search.placeholder': '搜索项目、工作流、路径…  Ctrl+K',
       'load.title': 'HyperFrames 占用',
@@ -270,7 +270,7 @@
       'dyn.opened': '已打开 {name}',
       'dyn.queued': '已加入任务队列',
       'dyn.killedN': '已结束 {n} 个进程',
-      'dyn.live': 'Framespace 1.0.2',
+      'dyn.live': 'HyperFramesSpace 1.0.2',
       'dyn.host': '本机',
       'doc.nodeMissing': '未找到',
       'doc.npxMissing': 'npx 不可用',
@@ -295,7 +295,7 @@
       'choose.dir': '选择扫描根目录'
     },
     en: {
-      'doc.title': 'Framespace — HyperFrames Workbench',
+      'doc.title': 'HyperFramesSpace — HyperFrames Workbench',
       'brand.subtitle': 'HyperFrames workbench',
       'search.placeholder': 'Search projects, workflows, paths…  Ctrl+K',
       'load.title': 'HyperFrames load',
@@ -562,7 +562,7 @@
       'dyn.opened': 'Opened {name}',
       'dyn.queued': 'Added to the job queue',
       'dyn.killedN': 'Ended {n} processes',
-      'dyn.live': 'Framespace 1.0.2',
+      'dyn.live': 'HyperFramesSpace 1.0.2',
       'dyn.host': 'This PC',
       'doc.nodeMissing': 'Not found',
       'doc.npxMissing': 'npx unavailable',

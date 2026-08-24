@@ -149,7 +149,7 @@ function openVisible(cwd, exe, args) {
     return /[\s&()^<>|"']/.test(s) || /[^\x00-\x7F]/.test(s) ? '"' + s.replace(/"/g, '\\"') + '"' : s;
   });
   const inner = parts.join(' ');
-  spawn('cmd.exe', ['/c', 'start', 'Framespace', '/D', cwd, 'cmd.exe', '/k', inner], {
+  spawn('cmd.exe', ['/c', 'start', 'HyperFramesSpace', '/D', cwd, 'cmd.exe', '/k', inner], {
     detached: true,
     windowsHide: true,
     env
