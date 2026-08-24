@@ -38,6 +38,7 @@ function createWindow() {
     minWidth: 1120,
     minHeight: 720,
     backgroundColor: '#0a0d12',
+    icon: path.join(__dirname, '..', 'assets', 'icon.ico'),
     frame: false,
     show: false,
     title: 'Framespace 1.0.2',

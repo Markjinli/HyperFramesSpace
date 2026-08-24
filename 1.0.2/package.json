@@ -36,9 +36,11 @@
       "package.json"
     ],
     "asar": true,
+    "icon": "assets/icon.png",
     "forceCodeSigning": false,
     "win": {
-      "signAndEditExecutable": false,
+      "icon": "assets/icon.png",
+      "signAndEditExecutable": true,
       "target": [
         {
           "target": "portable",
@@ -46,7 +48,8 @@
             "x64"
           ]
         }
-      ]
+      ],
+      "signExecutable": false
     },
     "portable": {
       "artifactName": "Framespace-${version}.exe"
