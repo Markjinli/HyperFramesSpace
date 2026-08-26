@@ -14,7 +14,7 @@
 
 ## 它做什么
 
-- 扫描你指定的根目录，识别带 `hyperframes.json` 的工程
+- 按文件名找全盘 `hyperframes.json` 收成库；启动先显示上次结果，扫描有进度、可取消。本机有 Everything 时会借它加速
 - 项目库用封面、时长、画幅、CLI pin、BRIEF 一句话编目
 - 选中工程后轻量预览，可拖动进度条
 - 一键在工程目录打开 Grok Build、ChatGPT 桌面、Codex CLI、Claude Code、Cursor

@@ -527,6 +527,37 @@ img { display: block; max-width: 100%; }
   white-space: pre-wrap; word-break: break-all; min-height: 64px;
 }
 
+.scan-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 220px;
+  max-width: 360px;
+  -webkit-app-region: no-drag;
+}
+.scan-progress[hidden] { display: none !important; }
+.scan-progress-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 99px;
+  background: #1b212c;
+  overflow: hidden;
+}
+.scan-progress-track i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #e8a317, #3ee0c5);
+}
+#scan-progress-text {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .status {
   display: flex; align-items: center; gap: 16px;
   padding: 0 12px; border-top: 1px solid var(--line);

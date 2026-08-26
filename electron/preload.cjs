@@ -4,6 +4,11 @@ contextBridge.exposeInMainWorld('framespaceAPI', {
   getSettings: () => ipcRenderer.invoke('desktop:get-settings'),
   saveSettings: (patch) => ipcRenderer.invoke('desktop:save-settings', patch),
   scan: (roots) => ipcRenderer.invoke('desktop:scan', roots),
+  scanStart: (opts) => ipcRenderer.invoke('desktop:scan-start', opts || {}),
+  scanCancel: () => ipcRenderer.invoke('desktop:scan-cancel'),
+  scanStatus: () => ipcRenderer.invoke('desktop:scan-status'),
+  catalogCache: () => ipcRenderer.invoke('desktop:catalog-cache'),
+  everythingStatus: () => ipcRenderer.invoke('desktop:everything-status'),
   occupancy: () => ipcRenderer.invoke('desktop:occupancy'),
   processes: () => ipcRenderer.invoke('desktop:processes'),
   kill: (pids) => ipcRenderer.invoke('desktop:kill', pids),
@@ -26,5 +31,10 @@ contextBridge.exposeInMainWorld('framespaceAPI', {
     const wrapped = (_e, payload) => fn(payload);
     ipcRenderer.on('desktop:jobs', wrapped);
     return () => ipcRenderer.removeListener('desktop:jobs', wrapped);
+  },
+  onScanEvent: (fn) => {
+    const wrapped = (_e, pack) => fn(pack && pack.type, pack && pack.payload);
+    ipcRenderer.on('desktop:scan-event', wrapped);
+    return () => ipcRenderer.removeListener('desktop:scan-event', wrapped);
   }
 });

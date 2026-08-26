@@ -4,6 +4,9 @@ const { pathToFileURL } = require('url');
 const fs = require('fs');
 const store = require('./lib/store.cjs');
 const scan = require('./lib/scan.cjs');
+const scanSession = require('./lib/scan-session.cjs');
+const catalogCache = require('./lib/catalog-cache.cjs');
+const everything = require('./lib/everything.cjs');
 const processes = require('./lib/processes.cjs');
 const jobs = require('./lib/jobs.cjs');
 const agents = require('./lib/agents.cjs');
@@ -84,14 +87,23 @@ app.on('window-all-closed', () => app.quit());
 ipcMain.handle('desktop:get-settings', () => store.load(settingsDir()));
 ipcMain.handle('desktop:save-settings', (_e, patch) => store.save(settingsDir(), patch || {}));
 
-ipcMain.handle('desktop:scan', (_e, roots) => {
+function broadcastScan(type, payload) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('desktop:scan-event', { type, payload: payload || {} });
+  }
+}
+
+ipcMain.handle('desktop:catalog-cache', () => catalogCache.load(settingsDir()));
+ipcMain.handle('desktop:everything-status', () => everything.probe());
+ipcMain.handle('desktop:scan-start', (_e, opts) => scanSession.start(settingsDir(), opts || {}, broadcastScan));
+ipcMain.handle('desktop:scan-cancel', () => ({ ok: scanSession.cancel(), running: scanSession.isRunning() }));
+ipcMain.handle('desktop:scan-status', () => ({ running: scanSession.isRunning() }));
+
+ipcMain.handle('desktop:scan', async (_e, roots) => {
   const settings = store.load(settingsDir());
   const list = Array.isArray(roots) && roots.length ? roots : settings.scanRoots;
-  const merged = store.mergeSuggestedRoots(list);
-  const added = merged.filter((p) => !(list || []).some((r) => String(r).replace(/[\\/]+$/, '').toLowerCase() === String(p).replace(/[\\/]+$/, '').toLowerCase()));
-  if (added.length) store.save(settingsDir(), { scanRoots: merged });
-  const projects = scan.scanRoots(merged, { latestPin: settings.latestPin, maxDepth: 12 });
-  return { projects, scanRoots: merged, added, suggested: store.existingExtraRoots() };
+  const projects = scan.scanRoots(list, { latestPin: settings.latestPin, maxDepth: 16 });
+  return { projects, scanRoots: list, added: [], suggested: [] };
 });
 
 ipcMain.handle('desktop:occupancy', async () => processes.occupancy([]));
@@ -164,6 +176,9 @@ ipcMain.handle('desktop:preview-start', async (_e, project) => preview.ensure(pr
 ipcMain.handle('desktop:preview-restart', async (_e, project) => preview.restart(project || {}));
 ipcMain.handle('desktop:preview-stop', () => preview.stop());
 ipcMain.handle('desktop:preview-status', () => preview.status());
-ipcMain.handle('desktop:reset-settings', () => store.reset(settingsDir()));
+ipcMain.handle('desktop:reset-settings', () => {
+  catalogCache.clear(settingsDir());
+  return store.reset(settingsDir());
+});
 
 app.on('before-quit', () => { preview.shutdown(); });

@@ -994,6 +994,10 @@
       cardSize: 'm',
       scanIntervalSec: 60,
       lastScanAt: 0,
+      autoScanOnLaunch: false,
+      scanScope: 'all-fixed',
+      scanEngine: 'auto',
+      scanProgress: null,
       autoSnapshot: true,
       processes: cloneProcesses(PROCESS_SEED),
       skills: cloneSkills(SKILL_SEED),
@@ -1597,12 +1601,37 @@
     setText('#status-count', t('dyn.inLib', { n: CATALOG.length }));
     var orphanN = listOrphans(ui.state.processes).length;
     setText('#status-proc', orphanN ? t('dyn.orphanN', { n: orphanN }) : t('dyn.noOrphan'));
-    var next = nextScanAt(ui.state.lastScanAt, ui.state.scanIntervalSec, Date.now());
-    if (!ui.state.scanIntervalSec) setText('#status-scan', t('dyn.scanManual'));
-    else if (!ui.state.lastScanAt) setText('#status-scan', '扫描：每 ' + (ui.state.scanIntervalSec / 60 >= 1 && ui.state.scanIntervalSec % 60 === 0 ? (ui.state.scanIntervalSec / 60) + ' 分钟' : ui.state.scanIntervalSec + ' 秒'));
-    else if (next) {
-      var sec = Math.max(0, Math.round((next - Date.now()) / 1000));
-      setText('#status-scan', t('dyn.nextScan', { n: sec }));
+    var progress = ui.state.scanProgress;
+    var bar = $('#scan-progress');
+    if (bar) {
+      var on = !!(progress && progress.active);
+      bar.hidden = !on;
+      if (on) {
+        var fill = $('#scan-progress-fill');
+        var label = $('#scan-progress-text');
+        var pct = Math.max(0, Math.min(100, Number(progress.percent) || 0));
+        if (fill) fill.style.width = pct + '%';
+        if (label) {
+          var bits = [];
+          if (progress.phase === 'hydrate') bits.push(t('scan.phaseHydrate'));
+          else bits.push(t('scan.phaseLocate'));
+          if (progress.engine) bits.push(progress.engine === 'everything' ? t('scan.engineEverything') : t('scan.engineWalk'));
+          if (progress.found) bits.push(t('scan.foundN', { n: progress.found }));
+          else if (progress.total) bits.push(progress.index + '/' + progress.total);
+          if (progress.current) bits.push(String(progress.current).slice(0, 42));
+          label.textContent = bits.join(' · ');
+        }
+      }
+    }
+    if (progress && progress.active) setText('#status-scan', t('dyn.scanning'));
+    else if (!ui.state.lastScanAt) setText('#status-scan', t('dyn.scanIdle'));
+    else if (!ui.state.scanIntervalSec) setText('#status-scan', t('dyn.scanManual'));
+    else {
+      var next = nextScanAt(ui.state.lastScanAt, ui.state.scanIntervalSec, Date.now());
+      if (next) {
+        var sec = Math.max(0, Math.round((next - Date.now()) / 1000));
+        setText('#status-scan', t('dyn.nextScan', { n: sec }));
+      }
     }
     var selCover = $('#set-cover-layout');
     if (selCover && selCover.value !== String(ui.state.coverLayout)) selCover.value = ui.state.coverLayout;
@@ -1618,6 +1647,12 @@
     if (hoverShow) hoverShow.value = String(ui.state.hoverShowMs == null ? 280 : ui.state.hoverShowMs);
     var hoverHide = $('#set-hover-hide');
     if (hoverHide) hoverHide.value = String(ui.state.hoverHideMs == null ? 200 : ui.state.hoverHideMs);
+    var autoScan = $('#set-auto-scan');
+    if (autoScan) autoScan.checked = !!ui.state.autoScanOnLaunch;
+    var scopeSel = $('#set-scan-scope');
+    if (scopeSel) scopeSel.value = ui.state.scanScope === 'roots' ? 'roots' : 'all-fixed';
+    var engineSel = $('#set-scan-engine');
+    if (engineSel) engineSel.value = ui.state.scanEngine || 'auto';
     renderOccupancy();
   }
 
@@ -1851,6 +1886,7 @@
     if (payload.lastCommand) ui.state.lastCommand = payload.lastCommand;
     if (payload.lastScanAt) ui.state.lastScanAt = payload.lastScanAt;
     if (payload.diagnosis) ui.state.diagnosis = payload.diagnosis;
+    if (payload.scanProgress !== undefined) ui.state.scanProgress = payload.scanProgress;
     render();
   }
 
@@ -2407,6 +2443,27 @@
         ui.state.scanIntervalSec = parseScanInterval(scanSel.value);
         armScanTimer();
         render();
+        if (global.FramespaceDesktop && global.FramespaceDesktop.persist) global.FramespaceDesktop.persist();
+      });
+    }
+    var autoScan = $('#set-auto-scan', root);
+    if (autoScan) {
+      autoScan.addEventListener('change', function () {
+        ui.state.autoScanOnLaunch = !!autoScan.checked;
+        if (global.FramespaceDesktop && global.FramespaceDesktop.persist) global.FramespaceDesktop.persist();
+      });
+    }
+    var scopeSel = $('#set-scan-scope', root);
+    if (scopeSel) {
+      scopeSel.addEventListener('change', function () {
+        ui.state.scanScope = scopeSel.value === 'roots' ? 'roots' : 'all-fixed';
+        if (global.FramespaceDesktop && global.FramespaceDesktop.persist) global.FramespaceDesktop.persist();
+      });
+    }
+    var engineSel = $('#set-scan-engine', root);
+    if (engineSel) {
+      engineSel.addEventListener('change', function () {
+        ui.state.scanEngine = engineSel.value || 'auto';
         if (global.FramespaceDesktop && global.FramespaceDesktop.persist) global.FramespaceDesktop.persist();
       });
     }

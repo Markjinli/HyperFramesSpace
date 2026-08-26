@@ -1,7 +1,7 @@
 {
   "name": "hyperframesspace",
   "productName": "HyperFramesSpace",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "description": "HyperFrames 工作台 · Windows 桌面版",
   "author": "HyperFramesSpace",
@@ -9,7 +9,7 @@
   "scripts": {
     "start": "electron .",
     "app": "electron .",
-    "test": "node tests/helpers.test.cjs",
+    "test": "node tests/helpers.test.cjs && node tests/scan-engine.test.cjs",
     "dist": "electron-builder --win portable",
     "dist:dir": "electron-builder --win dir"
   },

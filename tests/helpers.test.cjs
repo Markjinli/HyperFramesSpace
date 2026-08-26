@@ -383,6 +383,8 @@ check('HTML mockup source has library / workbench / agent labels', function () {
   assert.ok(html.indexOf('原因分析') !== -1);
   assert.ok(html.indexOf('data-reset-app') !== -1);
   assert.ok(html.indexOf('data-fix-scan') !== -1);
+  assert.ok(html.indexOf('启动时自动扫描') !== -1);
+  assert.ok(html.indexOf('id="scan-progress"') !== -1);
 });
 
 if (failures.length) {

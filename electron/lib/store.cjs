@@ -15,6 +15,9 @@ const DEFAULTS = {
   hoverHideMs: 200,
   cardSize: 'm',
   scanIntervalSec: 0,
+  autoScanOnLaunch: false,
+  scanScope: 'all-fixed',
+  scanEngine: 'auto',
   autoSnapshot: false,
   catalogUrl: 'https://raw.githubusercontent.com/heygen-com/hyperframes/main/skills/catalog.json',
   customCollections: null,
@@ -23,33 +26,17 @@ const DEFAULTS = {
   latestPin: ''
 };
 
-const EXTRA_ROOT_CANDIDATES = [
-  'C:\\1AI\\1cursorfull\\CLAW8Final\\videos'
-];
-
 function filePath(userData) {
   return path.join(userData, 'settings.json');
 }
 
-function isDir(p) {
-  try { return !!(p && fs.existsSync(p) && fs.statSync(p).isDirectory()); }
+function isDir(target) {
+  try { return !!(target && fs.existsSync(target) && fs.statSync(target).isDirectory()); }
   catch (_) { return false; }
-}
-
-function existingExtraRoots() {
-  return EXTRA_ROOT_CANDIDATES.filter(isDir);
 }
 
 function sameRoot(a, b) {
   return String(a || '').replace(/[\\/]+$/, '').toLowerCase() === String(b || '').replace(/[\\/]+$/, '').toLowerCase();
-}
-
-function mergeSuggestedRoots(roots) {
-  const out = Array.isArray(roots) ? roots.slice() : [];
-  existingExtraRoots().forEach((p) => {
-    if (!out.some((r) => sameRoot(r, p))) out.push(p);
-  });
-  return out;
 }
 
 function load(userData) {
@@ -60,6 +47,9 @@ function load(userData) {
   if (!Array.isArray(out.scanRoots) || !out.scanRoots.length) {
     out.scanRoots = DEFAULTS.scanRoots.slice();
   }
+  if (out.scanScope !== 'roots') out.scanScope = 'all-fixed';
+  if (!['auto', 'everything', 'walk'].includes(out.scanEngine)) out.scanEngine = 'auto';
+  out.autoScanOnLaunch = !!out.autoScanOnLaunch;
   return out;
 }
 
@@ -73,14 +63,18 @@ function save(userData, patch) {
 function reset(userData) {
   const dest = filePath(userData);
   try { fs.unlinkSync(dest); } catch (_) {}
-  return save(userData, { scanRoots: mergeSuggestedRoots(DEFAULTS.scanRoots.slice()) });
+  return save(userData, {
+    scanRoots: DEFAULTS.scanRoots.slice(),
+    autoScanOnLaunch: false,
+    scanScope: 'all-fixed',
+    scanEngine: 'auto'
+  });
 }
 
 module.exports = {
   DEFAULTS,
-  EXTRA_ROOT_CANDIDATES,
-  existingExtraRoots,
-  mergeSuggestedRoots,
+  isDir,
+  sameRoot,
   load,
   save,
   reset,

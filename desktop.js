@@ -7,6 +7,9 @@
   if (!api || !window.Framespace) return;
 
   var toastTimer = null;
+  var scanning = false;
+  var liveProjects = [];
+
   function toast(msg) {
     var el = document.getElementById('toast');
     if (!el) return;
@@ -28,20 +31,24 @@
       hoverHideMs: ui.state.hoverHideMs,
       cardSize: ui.state.cardSize,
       scanIntervalSec: ui.state.scanIntervalSec,
+      autoScanOnLaunch: !!ui.state.autoScanOnLaunch,
+      scanScope: ui.state.scanScope || 'all-fixed',
+      scanEngine: ui.state.scanEngine || 'auto',
       autoSnapshot: ui.state.autoSnapshot,
       catalogUrl: ui.state.catalogUrl
     });
   }
 
-  function applyProjects(projects) {
-    window.Framespace.setCatalog(projects || []);
+  function applyProjects(projects, stampScan) {
+    liveProjects = (projects || []).slice();
+    window.Framespace.setCatalog(liveProjects);
     var ui = window.Framespace.getUi();
     if (ui && ui.state) {
       var keep = ui.state.customCollections;
       if (!keep || !keep.length) {
-        ui.state.customCollections = window.Framespace.seedCustomCollections(projects);
+        ui.state.customCollections = window.Framespace.seedCustomCollections(liveProjects);
       }
-      ui.state.lastScanAt = Date.now();
+      if (stampScan) ui.state.lastScanAt = Date.now();
     }
     window.Framespace.render();
     var roots = document.getElementById('scan-roots');
@@ -52,15 +59,6 @@
         }) + '</div>';
       }).join('');
     }
-  }
-
-  function unpackScan(result) {
-    if (Array.isArray(result)) return { projects: result, added: [], scanRoots: (window.__fsSettings && window.__fsSettings.scanRoots) || [] };
-    return {
-      projects: result && result.projects || [],
-      added: result && result.added || [],
-      scanRoots: result && result.scanRoots || []
-    };
   }
 
   function setDiagnosis(patch) {
@@ -77,37 +75,68 @@
     }
   }
 
-  async function scanNow(reason) {
-    toast(reason === 'timer' ? t('dyn.scanningTimer') : t('dyn.scanning'));
-    var settings = await api.getSettings();
-    window.__fsSettings = settings;
-    if (window.FramespaceI18n) {
-      window.FramespaceI18n.setLocale(settings.locale || 'zh');
-      window.FramespaceI18n.apply(document);
+  function setScanProgress(progress) {
+    if (window.Framespace && window.Framespace.applyDesktopState) {
+      window.Framespace.applyDesktopState({ scanProgress: progress || null });
     }
-    var pack = unpackScan(await api.scan(settings.scanRoots));
-    var projects = pack.projects;
-    window.__fsSettings = Object.assign({}, settings, { scanRoots: pack.scanRoots.length ? pack.scanRoots : settings.scanRoots });
-    applyProjects(projects);
-    var missing = (projects || []).filter(function (p) { return /CLAW8Final\\videos/i.test(p.path || ''); }).length;
-    var videosRoot = 'C:\\1AI\\1cursorfull\\CLAW8Final\\videos';
-    var fromVideos = (projects || []).filter(function (p) {
-      return String(p.path || '').toLowerCase().indexOf(videosRoot.toLowerCase()) === 0;
-    }).length;
+  }
+
+  function engineLabel(engine) {
+    if (engine === 'everything') return t('scan.engineEverything');
+    if (engine === 'walk') return t('scan.engineWalk');
+    return t('scan.engineAuto');
+  }
+
+  function noteFromScan(pack) {
+    pack = pack || {};
+    var n = (pack.projects || liveProjects || []).length;
+    var engine = pack.engine || '';
+    var ev = pack.everything || {};
+    var parts = [t('diag.scanSummary', { n: n, engine: engineLabel(engine) })];
+    if (ev.available) parts.push(t('diag.everythingOn'));
+    else if (ev.running && !ev.esPath) parts.push(t('diag.everythingNoEs'));
+    else if (!ev.running) parts.push(t('diag.everythingOff'));
+    if (pack.cancelled) parts.push(t('diag.scanCancelled'));
+    return parts.join(' ');
+  }
+
+  function finishScan(pack) {
+    scanning = false;
+    setScanProgress(null);
+    if (pack && pack.projects) applyProjects(pack.projects, !pack.cancelled);
+    if (window.__fsSettings) {
+      window.__fsSettings.lastEngine = pack && pack.engine;
+    }
     setDiagnosis({
-      scanNote: pack.added.length
-        ? t('diag.scanAdded', { n: projects.length, path: pack.added.join(', ') })
-        : (fromVideos ? t('diag.scanOk', { n: projects.length }) : t('diag.scanMissing')),
-      canFixScan: !fromVideos
+      scanNote: noteFromScan(pack),
+      canFixScan: !((pack && pack.projects) || liveProjects).length
     });
-    if (settings.autoSnapshot) {
-      (projects || []).filter(function (p) { return !p.frameSrcs || !p.frameSrcs.length; }).slice(0, 3).forEach(function (p) {
+    var settings = window.__fsSettings || {};
+    if (!pack.cancelled && settings.autoSnapshot) {
+      (pack.projects || []).filter(function (p) { return !p.frameSrcs || !p.frameSrcs.length; }).slice(0, 3).forEach(function (p) {
         api.runJob({ action: 'snapshot-9', project: p, title: t('dyn.snap9', { name: p.name }) });
       });
     }
-    toast(t('dyn.scanResult', { n: projects.length }));
+    toast(pack.cancelled ? t('dyn.scanCancelled') : t('dyn.scanResult', { n: (pack.projects || []).length }));
     refreshProcesses();
-    return projects;
+  }
+
+  function startScan(reason) {
+    if (scanning && reason !== 'force') return Promise.resolve();
+    scanning = true;
+    setScanProgress({ active: true, phase: 'start', percent: 2, text: t('dyn.scanning') });
+    toast(reason === 'timer' ? t('dyn.scanningTimer') : t('dyn.scanning'));
+    return api.scanStart({ reason: reason || 'manual' });
+  }
+
+  function cancelScan() {
+    api.scanCancel();
+    api.saveSettings({ autoScanOnLaunch: false });
+    var ui = window.Framespace.getUi && window.Framespace.getUi();
+    if (ui && ui.state) ui.state.autoScanOnLaunch = false;
+    if (window.__fsSettings) window.__fsSettings.autoScanOnLaunch = false;
+    var autoBox = document.getElementById('set-auto-scan');
+    if (autoBox) autoBox.checked = false;
   }
 
   async function refreshOccupancy() {
@@ -149,7 +178,6 @@
       });
     }
   }
-
 
   var previewPath = '';
   var previewToken = 0;
@@ -233,11 +261,13 @@
     previewPath = '';
     if (project) startPreview(project);
   }
+
   window.FramespaceDesktop = {
-    scan: function (reason) { scanNow(reason); },
+    scan: function (reason) { startScan(reason); },
+    cancelScan: cancelScan,
     persist: persistPartial,
     diagnosis: function () { return window.__fsDiagnosis || {}; },
-    fixScan: async function () { return scanNow('fix'); },
+    fixScan: async function () { return startScan('fix'); },
     fixPreview: function () {
       var ui = window.Framespace.getUi && window.Framespace.getUi();
       var id = ui && ui.state && ui.state.selectedId;
@@ -253,17 +283,18 @@
       toast(t('diag.resetting'));
       var settings = await api.getSettings();
       window.__fsSettings = settings;
-      var rootInput = document.getElementById('set-scan-roots');
-      if (rootInput) rootInput.value = (settings.scanRoots || []).join('\n');
+      syncSettingInputs(settings);
       if (window.Framespace && window.Framespace.getUi) {
         var ui = window.Framespace.getUi();
         if (ui && ui.state) {
           ui.state.customCollections = [];
           ui.state.pinnedFolders = [];
           ui.state.selectedId = null;
+          ui.state.autoScanOnLaunch = false;
         }
       }
-      await scanNow('reset');
+      applyProjects([], false);
+      setDiagnosis({ scanNote: t('diag.needScan'), canFixScan: true });
       toast(t('diag.resetDone'));
     },
     runAgent: async function (agent, project) {
@@ -315,14 +346,78 @@
     reloadPreview: reloadPreview
   };
 
+  function syncSettingInputs(settings) {
+    settings = settings || {};
+    var rootInput = document.getElementById('set-scan-roots');
+    if (rootInput) rootInput.value = (settings.scanRoots || []).join('\n');
+    var agentSel = document.getElementById('set-agent');
+    if (agentSel) agentSel.value = settings.defaultAgent || 'grok';
+    var termSel = document.getElementById('set-terminal');
+    if (termSel) termSel.value = settings.terminal || 'wt';
+    var localeSel = document.getElementById('set-locale');
+    if (localeSel) localeSel.value = settings.locale === 'en' ? 'en' : 'zh';
+    var autoScan = document.getElementById('set-auto-scan');
+    if (autoScan) autoScan.checked = !!settings.autoScanOnLaunch;
+    var scopeSel = document.getElementById('set-scan-scope');
+    if (scopeSel) scopeSel.value = settings.scanScope === 'roots' ? 'roots' : 'all-fixed';
+    var engineSel = document.getElementById('set-scan-engine');
+    if (engineSel) engineSel.value = settings.scanEngine || 'auto';
+  }
+
+  async function refreshEverythingHint() {
+    var hint = document.getElementById('everything-status');
+    if (!hint || !api.everythingStatus) return;
+    try {
+      var st = await api.everythingStatus();
+      if (st.available) hint.textContent = t('set.everythingReady');
+      else if (st.running && !st.esPath) hint.textContent = t('set.everythingNoEs');
+      else hint.textContent = t('set.everythingMissing');
+    } catch (_) {
+      hint.textContent = t('set.everythingMissing');
+    }
+  }
+
   document.addEventListener('click', function (ev) {
-    var t = ev.target && ev.target.closest && ev.target.closest('[data-win]');
-    if (t) api.window(t.getAttribute('data-win'));
+    var win = ev.target && ev.target.closest && ev.target.closest('[data-win]');
+    if (win) api.window(win.getAttribute('data-win'));
+    var cancel = ev.target && ev.target.closest && ev.target.closest('[data-cancel-scan]');
+    if (cancel) cancelScan();
   });
 
   api.onJobs(function (list) {
     window.Framespace.applyDesktopState({ jobs: list || [] });
   });
+
+  if (api.onScanEvent) {
+    api.onScanEvent(function (type, payload) {
+      payload = payload || {};
+      if (type === 'scan:progress') {
+        scanning = true;
+        setScanProgress({
+          active: true,
+          phase: payload.phase || 'locate',
+          percent: payload.percent || 0,
+          engine: payload.engine || '',
+          current: payload.current || '',
+          found: payload.found || 0,
+          visited: payload.visited || 0,
+          index: payload.index || 0,
+          total: payload.total || 0
+        });
+      } else if (type === 'scan:item' && payload.project) {
+        if (payload.index === 1) liveProjects = [];
+        liveProjects.push(payload.project);
+        applyProjects(liveProjects, false);
+      } else if (type === 'scan:done') {
+        finishScan(payload);
+      } else if (type === 'scan:error') {
+        scanning = false;
+        setScanProgress(null);
+        setDiagnosis({ scanNote: t('diag.scanError', { err: payload.error || '' }), canFixScan: true });
+        toast(t('dyn.scanError'));
+      }
+    });
+  }
 
   async function boot() {
     var settings = await api.getSettings();
@@ -336,6 +431,9 @@
       hoverHideMs: settings.hoverHideMs == null ? 200 : settings.hoverHideMs,
       cardSize: settings.cardSize || 'm',
       scanIntervalSec: settings.scanIntervalSec || 0,
+      autoScanOnLaunch: !!settings.autoScanOnLaunch,
+      scanScope: settings.scanScope || 'all-fixed',
+      scanEngine: settings.scanEngine || 'auto',
       autoSnapshot: !!settings.autoSnapshot,
       catalogUrl: settings.catalogUrl,
       customCollections: settings.customCollections || [],
@@ -346,17 +444,22 @@
     });
     window.Framespace.setCatalog([]);
     window.Framespace.mount(document, initial);
-    var rootInput = document.getElementById('set-scan-roots');
-    if (rootInput) rootInput.value = (settings.scanRoots || []).join('\n');
-    var agentSel = document.getElementById('set-agent');
-    if (agentSel) agentSel.value = settings.defaultAgent || 'grok';
-    var termSel = document.getElementById('set-terminal');
-    if (termSel) termSel.value = settings.terminal || 'wt';
-    var localeSel = document.getElementById('set-locale');
-    if (localeSel) localeSel.value = settings.locale === 'en' ? 'en' : 'zh';
+    syncSettingInputs(settings);
     var live = document.getElementById('status-live');
     if (live) live.textContent = t('dyn.live');
-    await scanNow('boot');
+    var cache = null;
+    try { cache = await api.catalogCache(); } catch (_) {}
+    if (cache && cache.projects && cache.projects.length) {
+      applyProjects(cache.projects, false);
+      setDiagnosis({
+        scanNote: t('diag.cacheReady', { n: cache.projects.length }),
+        canFixScan: false
+      });
+    } else {
+      setDiagnosis({ scanNote: t('diag.needScan'), canFixScan: true });
+    }
+    refreshEverythingHint();
+    if (settings.autoScanOnLaunch) startScan('boot');
     refreshDoctor();
     refreshOccupancy();
     setInterval(refreshOccupancy, 2000);

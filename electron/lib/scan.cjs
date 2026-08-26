@@ -8,7 +8,9 @@ const SKIP_DIR = new Set([
   'windows', '$recycle.bin', 'system volume information', 'cookies',
   'recent', 'sendto', 'start menu', 'templates', 'ntuser.dat',
   'contacts', 'favorites', 'searches', 'saved games', 'links',
-  '.hyperframes', '.media', 'dist', 'build', 'out', 'coverage'
+  '.hyperframes', '.media', 'dist', 'build', 'out', 'coverage',
+  'program files', 'program files (x86)', 'programdata', 'windows.old',
+  'recovery', 'msocache', 'perflogs', 'config.msi', '$windows.~bt', '$windows.~ws'
 ]);
 
 function mediaUrl(filePath) {
@@ -183,8 +185,8 @@ function walk(root, maxDepth, found, seen) {
   if (!root || maxDepth < 0) return;
   let ents;
   try { ents = fs.readdirSync(root, { withFileTypes: true }); } catch (_) { return; }
-  const marker = path.join(root, 'hyperframes.json');
-  if (fs.existsSync(marker)) {
+  const hasMarker = ents.some((ent) => !ent.isDirectory() && String(ent.name).toLowerCase() === 'hyperframes.json');
+  if (hasMarker) {
     const key = path.normalize(root).toLowerCase();
     if (!seen.has(key)) {
       seen.add(key);
@@ -197,6 +199,38 @@ function walk(root, maxDepth, found, seen) {
     if (shouldSkipDir(ent.name)) return;
     walk(path.join(root, ent.name), maxDepth - 1, found, seen);
   });
+}
+
+async function walkAsync(root, maxDepth, found, seen, opts) {
+  opts = opts || {};
+  const signal = opts.signal;
+  const onDir = opts.onDir;
+  const queue = [{ dir: root, depth: maxDepth }];
+  let steps = 0;
+  while (queue.length) {
+    if (signal && signal.aborted) return;
+    const item = queue.shift();
+    if (!item || item.depth < 0) continue;
+    let ents;
+    try { ents = await fs.promises.readdir(item.dir, { withFileTypes: true }); } catch (_) { continue; }
+    if (typeof onDir === 'function') onDir(item.dir);
+    const hasMarker = ents.some((ent) => !ent.isDirectory() && String(ent.name).toLowerCase() === 'hyperframes.json');
+    if (hasMarker) {
+      const key = path.normalize(item.dir).toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        found.push(item.dir);
+      }
+      continue;
+    }
+    ents.forEach((ent) => {
+      if (!ent.isDirectory()) return;
+      if (shouldSkipDir(ent.name)) return;
+      queue.push({ dir: path.join(item.dir, ent.name), depth: item.depth - 1 });
+    });
+    steps += 1;
+    if (steps % 24 === 0) await new Promise((resolve) => setImmediate(resolve));
+  }
 }
 
 function readProject(dir, latestPin) {
@@ -312,5 +346,7 @@ module.exports = {
   parsePin,
   parseClips,
   mediaUrl,
-  comparePin
+  comparePin,
+  walkAsync,
+  shouldSkipDir
 };

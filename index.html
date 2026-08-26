@@ -14,7 +14,7 @@
       <div class="brand">
         <span class="mark" aria-hidden="true"><img src="assets/icon.png" alt=""></span>
         HyperFramesSpace
-        <small>1.0.3 · <span data-i18n="brand.subtitle">HyperFrames 工作台</span></small>
+        <small>1.0.4 · <span data-i18n="brand.subtitle">HyperFrames 工作台</span></small>
       </div>
       <div class="global-search">
         <input id="global-search" type="search" data-i18n-placeholder="search.placeholder" placeholder="搜索项目、工作流、路径…  Ctrl+K" autocomplete="off">
@@ -31,6 +31,11 @@
         </div>
         <button class="btn-ghost" type="button" data-cli="init" data-i18n="btn.newProject">新建工程</button>
         <button class="btn" type="button" data-run-scan="1" data-i18n="btn.scan">扫描目录</button>
+        <div class="scan-progress" id="scan-progress" hidden>
+          <div class="scan-progress-track"><i id="scan-progress-fill"></i></div>
+          <span id="scan-progress-text"></span>
+          <button type="button" class="btn-ghost" data-cancel-scan="1" data-i18n="btn.cancelScan">取消扫描</button>
+        </div>
         <div class="lang-switch" role="group" aria-label="Language">
           <button type="button" data-set-locale="zh">中文</button>
           <button type="button" data-set-locale="en">EN</button>
@@ -338,6 +343,27 @@
             <div class="field">
               <label data-i18n="set.scanRoots">扫描根（每行一个）</label>
               <textarea id="set-scan-roots" spellcheck="false"></textarea>
+              <div class="side-hint" data-i18n="set.scanRootsHint">范围选「仅扫描根」时才只用这些目录。默认会按文件名找全盘 hyperframes.json。</div>
+            </div>
+            <div class="field">
+              <label class="check-line"><input id="set-auto-scan" type="checkbox"> <span data-i18n="set.autoScan">启动时自动扫描</span></label>
+              <div class="side-hint" data-i18n="set.autoScanHint">默认关闭。打开软件先显示上次结果；取消一次扫描也会关掉这项。</div>
+            </div>
+            <div class="field">
+              <label data-i18n="set.scanScope">扫描范围</label>
+              <select id="set-scan-scope">
+                <option value="all-fixed" selected data-i18n="set.scopeAll">所有本地固定磁盘</option>
+                <option value="roots" data-i18n="set.scopeRoots">仅扫描根</option>
+              </select>
+            </div>
+            <div class="field">
+              <label data-i18n="set.scanEngine">扫描引擎</label>
+              <select id="set-scan-engine">
+                <option value="auto" selected data-i18n="set.engineAuto">自动（有 Everything 就用它）</option>
+                <option value="everything" data-i18n="set.engineEverything">Everything</option>
+                <option value="walk" data-i18n="set.engineWalk">文件夹遍历</option>
+              </select>
+              <div class="side-hint" id="everything-status" data-i18n="set.everythingMissing">未检测到 Everything</div>
             </div>
             <div class="field">
               <label data-i18n="set.cover">项目封面</label>
@@ -431,7 +457,7 @@
         <div class="diag-card" id="diag-card">
           <div class="diag-body" id="diag-body" data-i18n="diag.none">扫描和预览正常时，这里会保持安静。</div>
           <div class="diag-actions">
-            <button type="button" class="btn-amber" id="diag-fix-scan" data-fix-scan="1" data-i18n="diag.fixScan">补扫缺失目录</button>
+            <button type="button" class="btn-amber" id="diag-fix-scan" data-fix-scan="1" data-i18n="diag.fixScan">立即扫描</button>
             <button type="button" class="btn" id="diag-fix-preview" data-fix-preview="1" data-i18n="diag.fixPreview">重启预览</button>
             <button type="button" class="btn" data-kill-orphans="1" data-i18n="insp.clean">一键清理</button>
             <button type="button" class="btn-ghost" data-reset-app="1" data-i18n="diag.reset">重置软件</button>
