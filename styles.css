@@ -691,19 +691,25 @@ h4 .add-btn { float: right; margin-top: -2px; }
 .hover-preview {
   position: fixed;
   z-index: 35;
-  width: 520px;
-  height: 340px;
-  background: #12151c;
-  border: 1px solid var(--line-2);
-  border-radius: 14px;
-  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  width: 460px;
+  height: 318px;
+  background: #10141b;
+  border: 1px solid rgba(232, 163, 23, 0.22);
+  border-radius: 16px;
+  box-shadow: 0 18px 48px rgba(0,0,0,0.45);
   display: none;
   overflow: hidden;
   pointer-events: auto;
   flex-direction: column;
 }
 .hover-preview.is-on { display: flex; }
-.hover-preview-inner { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+.hover-preview-inner {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
 .hover-resizer {
   position: absolute;
   right: 0; bottom: 0;
@@ -713,29 +719,52 @@ h4 .add-btn { float: right; margin-top: -2px; }
     linear-gradient(135deg, transparent 0 50%, var(--amber) 50% 56%, transparent 56% 70%, var(--amber) 70% 76%, transparent 76%);
 }
 .hover-hero {
-  aspect-ratio: 16 / 9;
+  flex: 1 1 auto;
+  min-height: 0;
   background: #090b0f center/cover no-repeat;
 }
-.hover-body { padding: 10px 12px 12px; }
+.hover-body {
+  flex: 0 0 auto;
+  padding: 8px 10px 10px;
+  overflow: hidden;
+}
+.hover-body > b {
+  display: block;
+  font-size: 13px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hover-body > .meta {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .hover-strip {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
-  gap: 2px;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 3px;
   margin-top: 8px;
 }
 .hover-strip span {
   aspect-ratio: 16 / 9;
   background: #090b0f center/cover no-repeat;
-  border-radius: 3px;
+  border-radius: 4px;
   position: relative;
   border: 1px solid #2a3140;
-  min-height: 36px;
+  min-width: 0;
+  cursor: pointer;
 }
+.hover-strip span:hover { border-color: rgba(232,163,23,0.7); }
+.hover-strip span.is-on { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber); }
 .hover-strip em {
   position: absolute; left: 2px; bottom: 1px;
   font-style: normal; font-size: 8px; font-family: var(--mono);
   color: #fff; text-shadow: 0 1px 2px #000;
+  pointer-events: none;
 }
+.hover-hint { display: none; }
 
 .proc {
   display: grid;

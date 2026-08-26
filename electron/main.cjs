@@ -10,7 +10,7 @@ const agents = require('./lib/agents.cjs');
 const doctor = require('./lib/doctor.cjs');
 const preview = require('./lib/preview.cjs');
 
-app.setName('HyperFramesSpace-1.0.3');
+app.setName('HyperFramesSpace');
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -41,7 +41,7 @@ function createWindow() {
     icon: path.join(__dirname, '..', 'assets', 'icon.ico'),
     frame: false,
     show: false,
-    title: 'HyperFramesSpace 1.0.3',
+    title: 'HyperFramesSpace',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,

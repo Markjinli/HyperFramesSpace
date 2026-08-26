@@ -52,7 +52,7 @@
       "signExecutable": false
     },
     "portable": {
-      "artifactName": "HyperFramesSpace-${version}.exe"
+      "artifactName": "HyperFramesSpace.exe"
     }
   }
 }

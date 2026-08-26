@@ -981,8 +981,8 @@
       sidebarMode: 'custom',
       customCollections: seedCustomCollections(CATALOG),
       pinnedFolders: [],
-      hoverWidth: 520,
-      hoverHeight: 340,
+      hoverWidth: 460,
+      hoverHeight: 318,
       layout: 'grid',
       tab: 'overview',
       lastCommand: null,
@@ -1786,19 +1786,21 @@
       pop.setAttribute('data-for', id);
       var hero = coverCells(p, '1')[0];
       var strip = coverCells(p, '9');
-      var img = hero && hero.src
-        ? '<div class="hover-hero" style="background-image:url(\'' + hero.src.replace(/'/g, '%27') + '\')"></div>'
-        : '<div class="hover-hero poster-instrument"></div>';
+      var heroSrc = hero && hero.src ? hero.src : '';
+      var img = heroSrc
+        ? '<div class="hover-hero" id="hover-hero" style="background-image:url(\'' + heroSrc.replace(/'/g, '%27') + '\')"></div>'
+        : '<div class="hover-hero poster-instrument" id="hover-hero"></div>';
       inner.innerHTML =
         img +
         '<div class="hover-body">' +
           '<b>' + escapeHtml(p.name) + '</b>' +
-          '<div class="meta">' + p.duration + 's · 等距 9 帧（含首尾）</div>' +
+          '<div class="meta" id="hover-hero-meta">' + formatTime(hero && hero.t) + ' · ' + p.duration + 's</div>' +
           '<div class="hover-strip">' + strip.map(function (c) {
-            var st = c.src ? "background-image:url('" + c.src.replace(/'/g, '%27') + "')" : '';
-            return '<span style="' + st + '"><em>' + formatTime(c.t) + '</em></span>';
+            var src = c.src || '';
+            var on = heroSrc && src === heroSrc ? ' is-on' : '';
+            var st = src ? "background-image:url('" + src.replace(/'/g, '%27') + "')" : '';
+            return '<span class="hover-frame' + on + '" data-hover-frame="' + escapeHtml(src) + '" data-hover-t="' + escapeHtml(String(c.t)) + '" style="' + st + '"><em>' + formatTime(c.t) + '</em></span>';
           }).join('') + '</div>' +
-          '<div class="meta hover-hint">' + t('dyn.hoverHint') + '</div>' +
         '</div>';
     }
     var size = clampHoverSize(ui.state.hoverWidth, ui.state.hoverHeight);
@@ -2024,6 +2026,29 @@
       }
       if (t.closest('[data-reset-app]')) {
         if (global.FramespaceDesktop && global.FramespaceDesktop.resetApp) global.FramespaceDesktop.resetApp();
+        return;
+      }
+      var framePick = t.closest('[data-hover-frame]');
+      if (framePick) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var src = framePick.getAttribute('data-hover-frame') || '';
+        var when = framePick.getAttribute('data-hover-t');
+        var heroEl = $('#hover-hero');
+        if (heroEl) {
+          if (src) {
+            heroEl.style.backgroundImage = "url('" + src.replace(/'/g, '%27') + "')";
+            heroEl.classList.remove('poster-instrument');
+          } else {
+            heroEl.style.backgroundImage = '';
+            heroEl.classList.add('poster-instrument');
+          }
+        }
+        var metaEl = $('#hover-hero-meta');
+        var pop = $('#hover-preview');
+        var proj = pop ? getProject(CATALOG, pop.getAttribute('data-for')) : null;
+        if (metaEl) metaEl.textContent = formatTime(when) + ' · ' + ((proj && proj.duration) || '—') + 's';
+        $all('.hover-frame').forEach(function (el) { el.classList.toggle('is-on', el === framePick); });
         return;
       }
       var nav = t.closest('[data-nav]');
