@@ -40,7 +40,7 @@
     "forceCodeSigning": false,
     "win": {
       "icon": "assets/icon.png",
-      "signAndEditExecutable": true,
+      "signAndEditExecutable": false,
       "target": [
         {
           "target": "portable",
