@@ -18,8 +18,10 @@ contextBridge.exposeInMainWorld('framespaceAPI', {
   chooseDir: () => ipcRenderer.invoke('desktop:choose-dir'),
   window: (action) => ipcRenderer.invoke('desktop:window', action),
   previewStart: (project) => ipcRenderer.invoke('desktop:preview-start', project),
+  previewRestart: (project) => ipcRenderer.invoke('desktop:preview-restart', project),
   previewStop: () => ipcRenderer.invoke('desktop:preview-stop'),
   previewStatus: () => ipcRenderer.invoke('desktop:preview-status'),
+  resetSettings: () => ipcRenderer.invoke('desktop:reset-settings'),
   onJobs: (fn) => {
     const wrapped = (_e, payload) => fn(payload);
     ipcRenderer.on('desktop:jobs', wrapped);

@@ -10,7 +10,7 @@ const agents = require('./lib/agents.cjs');
 const doctor = require('./lib/doctor.cjs');
 const preview = require('./lib/preview.cjs');
 
-app.setName('HyperFramesSpace-1.0.2');
+app.setName('HyperFramesSpace-1.0.3');
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -41,7 +41,7 @@ function createWindow() {
     icon: path.join(__dirname, '..', 'assets', 'icon.ico'),
     frame: false,
     show: false,
-    title: 'HyperFramesSpace 1.0.2',
+    title: 'HyperFramesSpace 1.0.3',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -87,7 +87,11 @@ ipcMain.handle('desktop:save-settings', (_e, patch) => store.save(settingsDir(),
 ipcMain.handle('desktop:scan', (_e, roots) => {
   const settings = store.load(settingsDir());
   const list = Array.isArray(roots) && roots.length ? roots : settings.scanRoots;
-  return scan.scanRoots(list, { latestPin: settings.latestPin, maxDepth: 6 });
+  const merged = store.mergeSuggestedRoots(list);
+  const added = merged.filter((p) => !(list || []).some((r) => String(r).replace(/[\\/]+$/, '').toLowerCase() === String(p).replace(/[\\/]+$/, '').toLowerCase()));
+  if (added.length) store.save(settingsDir(), { scanRoots: merged });
+  const projects = scan.scanRoots(merged, { latestPin: settings.latestPin, maxDepth: 12 });
+  return { projects, scanRoots: merged, added, suggested: store.existingExtraRoots() };
 });
 
 ipcMain.handle('desktop:occupancy', async () => processes.occupancy([]));
@@ -157,7 +161,9 @@ ipcMain.handle('desktop:window', (_e, action) => {
   return true;
 });
 ipcMain.handle('desktop:preview-start', async (_e, project) => preview.ensure(project || {}));
+ipcMain.handle('desktop:preview-restart', async (_e, project) => preview.restart(project || {}));
 ipcMain.handle('desktop:preview-stop', () => preview.stop());
 ipcMain.handle('desktop:preview-status', () => preview.status());
+ipcMain.handle('desktop:reset-settings', () => store.reset(settingsDir()));
 
 app.on('before-quit', () => { preview.shutdown(); });

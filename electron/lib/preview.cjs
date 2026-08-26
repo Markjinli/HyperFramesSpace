@@ -274,6 +274,13 @@ function status() {
   return current ? Object.assign({ running: true }, current) : { running: false };
 }
 
+async function restart(project) {
+  shutdown();
+  boundPort = 0;
+  server = null;
+  return ensure(project || {});
+}
+
 function shutdown() {
   current = null;
   if (server) {
@@ -282,4 +289,4 @@ function shutdown() {
   }
 }
 
-module.exports = { ensure, stop, status, shutdown, PORT: PORT_START };
+module.exports = { ensure, restart, stop, status, shutdown, PORT: PORT_START };

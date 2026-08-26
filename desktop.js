@@ -23,6 +23,9 @@
       customCollections: ui.state.customCollections,
       pinnedFolders: ui.state.pinnedFolders,
       coverLayout: ui.state.coverLayout,
+      coverAtSec: ui.state.coverAtSec,
+      hoverShowMs: ui.state.hoverShowMs,
+      hoverHideMs: ui.state.hoverHideMs,
       cardSize: ui.state.cardSize,
       scanIntervalSec: ui.state.scanIntervalSec,
       autoSnapshot: ui.state.autoSnapshot,
@@ -51,6 +54,29 @@
     }
   }
 
+  function unpackScan(result) {
+    if (Array.isArray(result)) return { projects: result, added: [], scanRoots: (window.__fsSettings && window.__fsSettings.scanRoots) || [] };
+    return {
+      projects: result && result.projects || [],
+      added: result && result.added || [],
+      scanRoots: result && result.scanRoots || []
+    };
+  }
+
+  function setDiagnosis(patch) {
+    window.__fsDiagnosis = Object.assign({
+      scanNote: '',
+      previewNote: '',
+      processNote: '',
+      canFixScan: false,
+      canFixPreview: false,
+      canReset: true
+    }, window.__fsDiagnosis || {}, patch || {});
+    if (window.Framespace && window.Framespace.applyDesktopState) {
+      window.Framespace.applyDesktopState({ diagnosis: window.__fsDiagnosis });
+    }
+  }
+
   async function scanNow(reason) {
     toast(reason === 'timer' ? t('dyn.scanningTimer') : t('dyn.scanning'));
     var settings = await api.getSettings();
@@ -59,8 +85,21 @@
       window.FramespaceI18n.setLocale(settings.locale || 'zh');
       window.FramespaceI18n.apply(document);
     }
-    var projects = await api.scan(settings.scanRoots);
+    var pack = unpackScan(await api.scan(settings.scanRoots));
+    var projects = pack.projects;
+    window.__fsSettings = Object.assign({}, settings, { scanRoots: pack.scanRoots.length ? pack.scanRoots : settings.scanRoots });
     applyProjects(projects);
+    var missing = (projects || []).filter(function (p) { return /CLAW8Final\\videos/i.test(p.path || ''); }).length;
+    var videosRoot = 'C:\\1AI\\1cursorfull\\CLAW8Final\\videos';
+    var fromVideos = (projects || []).filter(function (p) {
+      return String(p.path || '').toLowerCase().indexOf(videosRoot.toLowerCase()) === 0;
+    }).length;
+    setDiagnosis({
+      scanNote: pack.added.length
+        ? t('diag.scanAdded', { n: projects.length, path: pack.added.join(', ') })
+        : (fromVideos ? t('diag.scanOk', { n: projects.length }) : t('diag.scanMissing')),
+      canFixScan: !fromVideos
+    });
     if (settings.autoSnapshot) {
       (projects || []).filter(function (p) { return !p.frameSrcs || !p.frameSrcs.length; }).slice(0, 3).forEach(function (p) {
         api.runJob({ action: 'snapshot-9', project: p, title: t('dyn.snap9', { name: p.name }) });
@@ -84,10 +123,15 @@
   async function refreshProcesses() {
     try {
       var pack = await api.processes();
+      var orphans = (pack.processes || []).filter(function (p) { return !!p.orphan; });
+      setDiagnosis({
+        processNote: orphans.length ? t('diag.orphans', { n: orphans.length }) : ''
+      });
       window.Framespace.applyDesktopState({
         processes: pack.processes || [],
         host: pack.host,
-        load: pack.load
+        load: pack.load,
+        diagnosis: window.__fsDiagnosis
       });
     } catch (err) {
       console.warn(err);
@@ -141,15 +185,18 @@
       return;
     }
     if (previewPath === project.path) return;
-    startPreview(project);
+    startPreview(project, true);
   }
 
-  async function startPreview(project) {
+  async function startPreview(project, force) {
     var token = ++previewToken;
     previewPath = project.path;
+    var frame = document.getElementById('live-preview-frame');
+    if (frame) frame.setAttribute('src', 'about:blank');
     setPreviewUi('busy', t('dyn.previewBusy'));
     try {
-      var info = await api.previewStart({
+      var starter = force && api.previewRestart ? api.previewRestart : api.previewStart;
+      var info = await starter({
         path: project.path,
         name: project.name,
         pin: project.pin,
@@ -157,11 +204,17 @@
       });
       if (token !== previewToken) return;
       previewPath = project.path;
-      setPreviewUi('on', (info.reused ? t('dyn.previewReuse', { name: project.name || '' }) : t('dyn.previewOn', { name: project.name || '' })), info.url);
+      setPreviewUi('on', (info.reused && !force ? t('dyn.previewReuse', { name: project.name || '' }) : t('dyn.previewOn', { name: project.name || '' })), info.url);
+      setDiagnosis({ previewNote: '', canFixPreview: false });
     } catch (err) {
       if (token !== previewToken) return;
+      if (!force && api.previewRestart) {
+        return startPreview(project, true);
+      }
       previewPath = '';
-      setPreviewUi('err', t('dyn.previewErr', { err: ((err && err.message) || err) }));
+      var msg = (err && err.message) || err;
+      setPreviewUi('err', t('dyn.previewErr', { err: msg }));
+      setDiagnosis({ previewNote: t('diag.previewStuck', { err: msg }), canFixPreview: true });
     }
   }
 
@@ -183,6 +236,36 @@
   window.FramespaceDesktop = {
     scan: function (reason) { scanNow(reason); },
     persist: persistPartial,
+    diagnosis: function () { return window.__fsDiagnosis || {}; },
+    fixScan: async function () { return scanNow('fix'); },
+    fixPreview: function () {
+      var ui = window.Framespace.getUi && window.Framespace.getUi();
+      var id = ui && ui.state && ui.state.selectedId;
+      var project = id ? window.Framespace.getProject(window.Framespace.CATALOG, id) : null;
+      previewPath = '';
+      if (project) startPreview(project, true);
+      else stopPreview(false);
+    },
+    resetApp: async function () {
+      try { await api.previewStop(); } catch (_) {}
+      try { await api.resetSettings(); } catch (_) {}
+      previewPath = '';
+      toast(t('diag.resetting'));
+      var settings = await api.getSettings();
+      window.__fsSettings = settings;
+      var rootInput = document.getElementById('set-scan-roots');
+      if (rootInput) rootInput.value = (settings.scanRoots || []).join('\n');
+      if (window.Framespace && window.Framespace.getUi) {
+        var ui = window.Framespace.getUi();
+        if (ui && ui.state) {
+          ui.state.customCollections = [];
+          ui.state.pinnedFolders = [];
+          ui.state.selectedId = null;
+        }
+      }
+      await scanNow('reset');
+      toast(t('diag.resetDone'));
+    },
     runAgent: async function (agent, project) {
       try {
         var res = await api.openAgent({ agent: agent, project: project });
@@ -248,6 +331,9 @@
     try { skills = await api.skills(); } catch (_) {}
     var initial = window.Framespace.createViewState({
       coverLayout: settings.coverLayout || '9',
+      coverAtSec: settings.coverAtSec == null ? 'auto' : settings.coverAtSec,
+      hoverShowMs: settings.hoverShowMs == null ? 280 : settings.hoverShowMs,
+      hoverHideMs: settings.hoverHideMs == null ? 200 : settings.hoverHideMs,
       cardSize: settings.cardSize || 'm',
       scanIntervalSec: settings.scanIntervalSec || 0,
       autoSnapshot: !!settings.autoSnapshot,

@@ -33,7 +33,7 @@ function classify(cmd, name) {
   if (/preview/.test(lower)) return 'preview';
   if (/\bplay\b/.test(lower)) return 'play';
   if (/hyperframes/.test(lower)) return 'cli';
-  if (/electron/.test(lower) && /framespace/i.test(lower)) return 'framespace';
+  if (/electron/.test(lower) && /framespace|hyperframesspace/i.test(lower)) return 'framespace';
   return 'other';
 }
 
@@ -89,7 +89,7 @@ async function listProcesses() {
   const script = [
     "$filter = \"Name='node.exe' OR Name='ffmpeg.exe' OR Name='chrome.exe' OR Name='msedge.exe' OR Name='electron.exe'\"",
     '$procs = Get-CimInstance Win32_Process -Filter $filter | Where-Object {',
-    "  $_.CommandLine -and ($_.CommandLine -match 'hyperframes|hf-preview|headless|Framespace|3317')",
+    "  $_.CommandLine -and ($_.CommandLine -match 'hyperframes|hf-preview|headless|Framespace|HyperFramesSpace|3317')",
     '}',
     '$procs | Select-Object ProcessId, Name, CommandLine, WorkingSetSize, CreationDate | ConvertTo-Json -Compress'
   ].join('; ');
@@ -111,7 +111,7 @@ async function listProcesses() {
       cmd,
       port: null,
       ageMin: age,
-      orphan: age >= 40 && kind !== 'encode' && kind !== 'render-chrome' && kind !== 'snapshot' && kind !== 'framespace',
+      orphan: (kind === 'preview' || kind === 'play' || kind === 'studio-chrome') || (age >= 40 && kind !== 'encode' && kind !== 'render-chrome' && kind !== 'snapshot' && kind !== 'framespace'),
       cpu: 0,
       memMb,
       gpu: kind === 'render-chrome' || kind === 'studio-chrome' ? 8 : 0,

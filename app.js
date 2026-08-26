@@ -398,6 +398,24 @@
     return out;
   }
 
+  function coverAtSecValue() {
+    if (!ui || !ui.state || ui.state.coverAtSec == null || ui.state.coverAtSec === '') return 'auto';
+    return ui.state.coverAtSec;
+  }
+
+  function nearestCoverIndex(durationSec, atSec) {
+    var times = equalFrameTimes(durationSec, 9);
+    var t = Number(atSec);
+    if (!isFinite(t) || t < 0) return 4;
+    var best = 0;
+    var bestD = Math.abs((times[0] || 0) - t);
+    for (var i = 1; i < times.length; i++) {
+      var d = Math.abs(times[i] - t);
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    return best;
+  }
+
   function coverIndexPlan(layout) {
     var k = String(layout || '1');
     if (k === '4') return [0, 3, 5, 8];
@@ -415,6 +433,10 @@
     if (!project) return [];
     var times = equalFrameTimes(project.duration, 9);
     var plan = coverIndexPlan(layout);
+    if (String(layout || '1') === '1') {
+      var at = coverAtSecValue();
+      if (at !== 'auto') plan = [nearestCoverIndex(project.duration, at)];
+    }
     var bank = (project.frameSrcs && project.frameSrcs.length)
       ? project.frameSrcs
       : (FRAME_BANK[project.id] || (project.thumb ? [project.thumb] : []));
@@ -614,8 +636,14 @@
     });
   }
 
+  function hoverShowDelayMs() {
+    var n = ui && ui.state ? Number(ui.state.hoverShowMs) : 280;
+    return isFinite(n) && n >= 0 ? n : 280;
+  }
+
   function hoverHideDelayMs() {
-    return 1000;
+    var n = ui && ui.state ? Number(ui.state.hoverHideMs) : 200;
+    return isFinite(n) && n >= 0 ? n : 200;
   }
 
   function clampHoverSize(width, height) {
@@ -960,6 +988,9 @@
       lastCommand: null,
       agentModal: null,
       coverLayout: '9',
+      coverAtSec: 'auto',
+      hoverShowMs: 280,
+      hoverHideMs: 200,
       cardSize: 'm',
       scanIntervalSec: 60,
       lastScanAt: 0,
@@ -1141,6 +1172,7 @@
     pinnedFolderLabel: pinnedFolderLabel,
     isFolderPinned: isFolderPinned,
     folderDisplayName: folderDisplayName,
+    hoverShowDelayMs: hoverShowDelayMs,
     hoverHideDelayMs: hoverHideDelayMs,
     clampHoverSize: clampHoverSize,
     cardMinPx: cardMinPx,
@@ -1578,6 +1610,14 @@
     if (selScan && selScan.value !== String(ui.state.scanIntervalSec)) selScan.value = String(ui.state.scanIntervalSec);
     var autoSnap = $('#set-auto-snapshot');
     if (autoSnap) autoSnap.checked = !!ui.state.autoSnapshot;
+    var coverAt = $('#set-cover-at');
+    if (coverAt && coverAt.value !== String(ui.state.coverAtSec == null ? 'auto' : ui.state.coverAtSec)) {
+      coverAt.value = String(ui.state.coverAtSec == null ? 'auto' : ui.state.coverAtSec);
+    }
+    var hoverShow = $('#set-hover-show');
+    if (hoverShow) hoverShow.value = String(ui.state.hoverShowMs == null ? 280 : ui.state.hoverShowMs);
+    var hoverHide = $('#set-hover-hide');
+    if (hoverHide) hoverHide.value = String(ui.state.hoverHideMs == null ? 200 : ui.state.hoverHideMs);
     renderOccupancy();
   }
 
@@ -1808,6 +1848,7 @@
     if (payload.load) ui.state.load = payload.load;
     if (payload.lastCommand) ui.state.lastCommand = payload.lastCommand;
     if (payload.lastScanAt) ui.state.lastScanAt = payload.lastScanAt;
+    if (payload.diagnosis) ui.state.diagnosis = payload.diagnosis;
     render();
   }
 
@@ -1874,6 +1915,22 @@
     }, ui.state.scanIntervalSec * 1000);
   }
 
+  function renderDiagnosis() {
+    var host = $('#diag-card');
+    if (!host) return;
+    var d = (ui.state && ui.state.diagnosis) || (global.FramespaceDesktop && global.FramespaceDesktop.diagnosis && global.FramespaceDesktop.diagnosis()) || {};
+    var notes = [];
+    if (d.scanNote) notes.push(d.scanNote);
+    if (d.previewNote) notes.push(d.previewNote);
+    if (d.processNote) notes.push(d.processNote);
+    var body = $('#diag-body');
+    if (body) body.textContent = notes.length ? notes.join('\n') : t('diag.none');
+    var scanBtn = $('#diag-fix-scan');
+    var prevBtn = $('#diag-fix-preview');
+    if (scanBtn) scanBtn.style.display = d.canFixScan ? '' : 'none';
+    if (prevBtn) prevBtn.style.display = d.canFixPreview ? '' : 'none';
+  }
+
   function render() {
     renderChrome();
     renderLibrary();
@@ -1883,6 +1940,7 @@
     renderJobs();
     renderDoctor();
     renderModal();
+    renderDiagnosis();
     syncLivePreview();
   }
 
@@ -1956,6 +2014,18 @@
     root.addEventListener('click', function (ev) {
       var t = ev.target;
       if (!t || !t.closest) return;
+      if (t.closest('[data-fix-scan]')) {
+        if (global.FramespaceDesktop && global.FramespaceDesktop.fixScan) global.FramespaceDesktop.fixScan();
+        return;
+      }
+      if (t.closest('[data-fix-preview]')) {
+        if (global.FramespaceDesktop && global.FramespaceDesktop.fixPreview) global.FramespaceDesktop.fixPreview();
+        return;
+      }
+      if (t.closest('[data-reset-app]')) {
+        if (global.FramespaceDesktop && global.FramespaceDesktop.resetApp) global.FramespaceDesktop.resetApp();
+        return;
+      }
       var nav = t.closest('[data-nav]');
       if (nav) {
         ui.state = setView(ui.state, nav.getAttribute('data-nav'));
@@ -2406,7 +2476,7 @@
       cancelHoverTimers();
       hoverShowTimer = global.setTimeout(function () {
         showHover(id, card.getBoundingClientRect());
-      }, 180);
+      }, hoverShowDelayMs());
     });
     root.addEventListener('mouseout', function (ev) {
       var card = ev.target && ev.target.closest && ev.target.closest('[data-hover-project]');

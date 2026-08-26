@@ -769,3 +769,30 @@ h4 .add-btn { float: right; margin-top: -2px; }
   .rail .spacer { display: none; }
   .titlebar .brand small, .win-dots { display: none; }
 }
+
+.diag-card {
+  margin: 0 12px 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-2);
+}
+.diag-body {
+  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+  min-height: 2.8em;
+}
+.diag-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.diag-actions .btn,
+.diag-actions .btn-amber,
+.diag-actions .btn-ghost {
+  font-size: 11px;
+  padding: 4px 8px;
+}

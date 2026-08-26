@@ -7,7 +7,7 @@
 ## 下载使用
 
 1. 打开 [Releases](https://github.com/Markjinli/HyperFramesSpace/releases/latest)
-2. 下载 `HyperFramesSpace-1.0.2.exe`
+2. 下载 `HyperFramesSpace-1.0.3.exe`
 3. 双击打开，不用安装
 
 这是绿色便携版，拷到别的文件夹也能用。
@@ -38,7 +38,7 @@ npm start
 npm run dist
 ```
 
-输出在 `dist/HyperFramesSpace-1.0.2.exe`。给 tag `v1.0.x` 推上去后，GitHub Actions 也会自动打 exe 并挂到 Release。
+输出在 `dist/HyperFramesSpace-1.0.3.exe`。给 tag `v1.0.x` 推上去后，GitHub Actions 也会自动打 exe 并挂到 Release。
 
 ## 开源
 

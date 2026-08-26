@@ -1,6 +1,7 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
 const agents = require('./agents.cjs');
+const processes = require('./processes.cjs');
 const path = require('path');
 const os = require('os');
 
@@ -40,7 +41,15 @@ function commandFor(action, project, extra) {
   }
 }
 
-function startJob(spec) {
+async function killPreviewLeftovers() {
+  try {
+    const list = await processes.listProcesses();
+    const pids = list.filter((p) => p.kind === 'preview' || p.kind === 'play' || p.kind === 'studio-chrome').map((p) => p.pid);
+    if (pids.length) await processes.killPids(pids);
+  } catch (_) {}
+}
+
+async function startJob(spec) {
   spec = spec || {};
   const project = spec.project || null;
   const action = spec.action || 'cli';
@@ -62,6 +71,10 @@ function startJob(spec) {
   };
   jobs.unshift(job);
   if (jobs.length > 40) jobs.pop();
+
+  if (detached) {
+    await killPreviewLeftovers();
+  }
 
   const child = spawn(command, {
     cwd,

@@ -29,6 +29,7 @@ const {
   pinnedFolderLabel,
   isFolderPinned,
   hoverHideDelayMs,
+  hoverShowDelayMs,
   clampHoverSize,
   cardMinPx,
   parseScanInterval,
@@ -313,7 +314,8 @@ check('folder tree flattens nested HyperFrames projects', function () {
 });
 
 check('hover hide delay is 1s and size clamps', function () {
-  assert.strictEqual(hoverHideDelayMs(), 1000);
+  assert.strictEqual(hoverHideDelayMs(), 200);
+  assert.strictEqual(hoverShowDelayMs(), 280);
   var s = clampHoverSize(120, 50);
   assert.ok(s.width >= 360);
   assert.ok(s.height >= 200);
@@ -378,6 +380,9 @@ check('HTML mockup source has library / workbench / agent labels', function () {
   assert.ok(html.indexOf('data-nav="skills"') !== -1);
   assert.ok(html.indexOf('id="view-skills"') !== -1);
   assert.ok(html.indexOf('检查热门') !== -1);
+  assert.ok(html.indexOf('原因分析') !== -1);
+  assert.ok(html.indexOf('data-reset-app') !== -1);
+  assert.ok(html.indexOf('data-fix-scan') !== -1);
 });
 
 if (failures.length) {

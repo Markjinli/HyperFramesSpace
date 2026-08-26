@@ -10,6 +10,9 @@ const DEFAULTS = {
   defaultAgent: 'grok',
   terminal: 'wt',
   coverLayout: '9',
+  coverAtSec: 'auto',
+  hoverShowMs: 280,
+  hoverHideMs: 200,
   cardSize: 'm',
   scanIntervalSec: 0,
   autoSnapshot: false,
@@ -20,8 +23,33 @@ const DEFAULTS = {
   latestPin: ''
 };
 
+const EXTRA_ROOT_CANDIDATES = [
+  'C:\\1AI\\1cursorfull\\CLAW8Final\\videos'
+];
+
 function filePath(userData) {
   return path.join(userData, 'settings.json');
+}
+
+function isDir(p) {
+  try { return !!(p && fs.existsSync(p) && fs.statSync(p).isDirectory()); }
+  catch (_) { return false; }
+}
+
+function existingExtraRoots() {
+  return EXTRA_ROOT_CANDIDATES.filter(isDir);
+}
+
+function sameRoot(a, b) {
+  return String(a || '').replace(/[\\/]+$/, '').toLowerCase() === String(b || '').replace(/[\\/]+$/, '').toLowerCase();
+}
+
+function mergeSuggestedRoots(roots) {
+  const out = Array.isArray(roots) ? roots.slice() : [];
+  existingExtraRoots().forEach((p) => {
+    if (!out.some((r) => sameRoot(r, p))) out.push(p);
+  });
+  return out;
 }
 
 function load(userData) {
@@ -42,4 +70,19 @@ function save(userData, patch) {
   return next;
 }
 
-module.exports = { DEFAULTS, load, save, filePath };
+function reset(userData) {
+  const dest = filePath(userData);
+  try { fs.unlinkSync(dest); } catch (_) {}
+  return save(userData, { scanRoots: mergeSuggestedRoots(DEFAULTS.scanRoots.slice()) });
+}
+
+module.exports = {
+  DEFAULTS,
+  EXTRA_ROOT_CANDIDATES,
+  existingExtraRoots,
+  mergeSuggestedRoots,
+  load,
+  save,
+  reset,
+  filePath
+};
