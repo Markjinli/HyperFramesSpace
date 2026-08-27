@@ -48,7 +48,7 @@ function load(userData) {
     out.scanRoots = DEFAULTS.scanRoots.slice();
   }
   if (out.scanScope !== 'roots') out.scanScope = 'all-fixed';
-  if (!['auto', 'everything', 'walk'].includes(out.scanEngine)) out.scanEngine = 'auto';
+  if (!['auto', 'usn', 'everything', 'walk'].includes(out.scanEngine)) out.scanEngine = 'auto';
   out.autoScanOnLaunch = !!out.autoScanOnLaunch;
   return out;
 }

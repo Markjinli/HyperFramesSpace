@@ -385,6 +385,8 @@ check('HTML mockup source has library / workbench / agent labels', function () {
   assert.ok(html.indexOf('data-fix-scan') !== -1);
   assert.ok(html.indexOf('启动时自动扫描') !== -1);
   assert.ok(html.indexOf('id="scan-progress"') !== -1);
+  assert.ok(html.indexOf('id="diag-build-index"') !== -1);
+  assert.ok(html.indexOf('data-build-index') !== -1);
 });
 
 if (failures.length) {

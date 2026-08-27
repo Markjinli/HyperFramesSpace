@@ -68,6 +68,7 @@
       processNote: '',
       canFixScan: false,
       canFixPreview: false,
+      canBuildIndex: false,
       canReset: true
     }, window.__fsDiagnosis || {}, patch || {});
     if (window.Framespace && window.Framespace.applyDesktopState) {
@@ -83,6 +84,8 @@
 
   function engineLabel(engine) {
     if (engine === 'everything') return t('scan.engineEverything');
+    if (engine === 'usn') return t('scan.engineUsn');
+    if (engine === 'usn-cache') return t('scan.engineUsnCache');
     if (engine === 'walk') return t('scan.engineWalk');
     return t('scan.engineAuto');
   }
@@ -92,10 +95,16 @@
     var n = (pack.projects || liveProjects || []).length;
     var engine = pack.engine || '';
     var ev = pack.everything || {};
+    var usnInfo = pack.usn || {};
     var parts = [t('diag.scanSummary', { n: n, engine: engineLabel(engine) })];
-    if (ev.available) parts.push(t('diag.everythingOn'));
-    else if (ev.running && !ev.esPath) parts.push(t('diag.everythingNoEs'));
-    else if (!ev.running) parts.push(t('diag.everythingOff'));
+    if (engine === 'usn') parts.push(t('diag.usnOn'));
+    else if (engine === 'usn-cache') parts.push(t('diag.usnCache'));
+    else if (usnInfo.needsElevation || usnInfo.error === 'access-denied' || usnInfo.error === 'helper-missing') parts.push(t('diag.usnNeedAdmin'));
+    if (engine === 'everything') {
+      if (ev.available) parts.push(t('diag.everythingOn'));
+      else if (ev.running && !ev.esPath) parts.push(t('diag.everythingNoEs'));
+      else parts.push(t('diag.everythingOff'));
+    }
     if (pack.cancelled) parts.push(t('diag.scanCancelled'));
     return parts.join(' ');
   }
@@ -107,9 +116,11 @@
     if (window.__fsSettings) {
       window.__fsSettings.lastEngine = pack && pack.engine;
     }
+    var usnInfo = (pack && pack.usn) || {};
     setDiagnosis({
       scanNote: noteFromScan(pack),
-      canFixScan: !((pack && pack.projects) || liveProjects).length
+      canFixScan: !((pack && pack.projects) || liveProjects).length,
+      canBuildIndex: !!(usnInfo.needsElevation || usnInfo.error === 'access-denied' || pack.engine === 'walk' || pack.engine === 'usn-cache')
     });
     var settings = window.__fsSettings || {};
     if (!pack.cancelled && settings.autoSnapshot) {
@@ -294,7 +305,7 @@
         }
       }
       applyProjects([], false);
-      setDiagnosis({ scanNote: t('diag.needScan'), canFixScan: true });
+      setDiagnosis({ scanNote: t('diag.needScan'), canFixScan: true, canBuildIndex: true });
       toast(t('diag.resetDone'));
     },
     runAgent: async function (agent, project) {
@@ -343,7 +354,21 @@
     toast: toast,
     syncPreview: syncPreview,
     stopPreview: function () { stopPreview(true); },
-    reloadPreview: reloadPreview
+    reloadPreview: reloadPreview,
+    buildIndex: async function () {
+      toast(t('diag.buildingIndex'));
+      try {
+        var res = api.usnBuild ? await api.usnBuild() : { ok: false, error: 'missing' };
+        if (res && res.ok) {
+          toast(t('diag.indexReady', { n: (res.dirs || []).length }));
+          return startScan('index');
+        }
+        toast(t(res && res.cancelled ? 'diag.uacCancelled' : 'diag.indexFail', { err: (res && res.error) || '' }));
+        setDiagnosis({ scanNote: t('diag.usnNeedAdmin'), canBuildIndex: true, canFixScan: true });
+      } catch (err) {
+        toast(t('diag.indexFail', { err: err.message || err }));
+      }
+    }
   };
 
   function syncSettingInputs(settings) {
@@ -364,16 +389,15 @@
     if (engineSel) engineSel.value = settings.scanEngine || 'auto';
   }
 
-  async function refreshEverythingHint() {
-    var hint = document.getElementById('everything-status');
-    if (!hint || !api.everythingStatus) return;
+  async function refreshUsnHint() {
+    var hint = document.getElementById('usn-status');
+    if (!hint || !api.usnStatus) return;
     try {
-      var st = await api.everythingStatus();
-      if (st.available) hint.textContent = t('set.everythingReady');
-      else if (st.running && !st.esPath) hint.textContent = t('set.everythingNoEs');
-      else hint.textContent = t('set.everythingMissing');
+      var st = await api.usnStatus();
+      if (st.cached) hint.textContent = t('set.usnReady');
+      else hint.textContent = t('set.usnNeedAdmin');
     } catch (_) {
-      hint.textContent = t('set.everythingMissing');
+      hint.textContent = t('set.usnHint');
     }
   }
 
@@ -456,9 +480,9 @@
         canFixScan: false
       });
     } else {
-      setDiagnosis({ scanNote: t('diag.needScan'), canFixScan: true });
+      setDiagnosis({ scanNote: t('diag.needScan'), canFixScan: true, canBuildIndex: true });
     }
-    refreshEverythingHint();
+    refreshUsnHint();
     if (settings.autoScanOnLaunch) startScan('boot');
     refreshDoctor();
     refreshOccupancy();

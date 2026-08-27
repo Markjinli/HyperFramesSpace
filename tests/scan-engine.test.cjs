@@ -73,6 +73,28 @@ async function run() {
     assert.ok(list.some((d) => /^[A-Z]:\\$/i.test(d)));
   });
 
+
+  await check('store accepts usn engine', function () {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hfs-store-usn-'));
+    const usnStore = require('..\\electron\\lib\\store.cjs');
+    usnStore.save(dir, { scanEngine: 'usn' });
+    const settings = usnStore.load(dir);
+    assert.strictEqual(settings.scanEngine, 'usn');
+  });
+
+  await check('ntfs usn cache round-trips dirs', function () {
+    const usn = require('..\\electron\\lib\\ntfs-usn.cjs');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hfs-usn-'));
+    usn.saveCache(dir, { dirs: ['C:\\demo', 'C:\\demo', 'D:\\film'] });
+    const loaded = usn.loadCache(dir);
+    assert.ok(loaded);
+    assert.strictEqual(loaded.dirs.length, 2);
+    const parsed = usn.parseJson('noise {"ok":true,"dirs":["C:\\\\a"]} tail');
+    assert.strictEqual(parsed.ok, true);
+    const scoped = usn.filterToRoots(['C:\\a\\p', 'D:\\z'], ['C:\\a']);
+    assert.strictEqual(scoped.length, 1);
+  });
+
   if (failures.length) {
     console.log('\n' + failures.length + ' failed');
     process.exit(1);

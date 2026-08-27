@@ -1966,6 +1966,8 @@
     var scanBtn = $('#diag-fix-scan');
     var prevBtn = $('#diag-fix-preview');
     if (scanBtn) scanBtn.style.display = d.canFixScan ? '' : 'none';
+    var indexBtn = $('#diag-build-index');
+    if (indexBtn) indexBtn.style.display = d.canBuildIndex ? '' : 'none';
     if (prevBtn) prevBtn.style.display = d.canFixPreview ? '' : 'none';
   }
 
@@ -2054,6 +2056,10 @@
       if (!t || !t.closest) return;
       if (t.closest('[data-fix-scan]')) {
         if (global.FramespaceDesktop && global.FramespaceDesktop.fixScan) global.FramespaceDesktop.fixScan();
+        return;
+      }
+      if (t.closest('[data-build-index]')) {
+        if (global.FramespaceDesktop && global.FramespaceDesktop.buildIndex) global.FramespaceDesktop.buildIndex();
         return;
       }
       if (t.closest('[data-fix-preview]')) {

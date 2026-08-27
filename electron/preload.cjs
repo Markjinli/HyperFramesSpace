@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('framespaceAPI', {
   scanStatus: () => ipcRenderer.invoke('desktop:scan-status'),
   catalogCache: () => ipcRenderer.invoke('desktop:catalog-cache'),
   everythingStatus: () => ipcRenderer.invoke('desktop:everything-status'),
+  usnStatus: () => ipcRenderer.invoke('desktop:usn-status'),
+  usnBuild: () => ipcRenderer.invoke('desktop:usn-build'),
   occupancy: () => ipcRenderer.invoke('desktop:occupancy'),
   processes: () => ipcRenderer.invoke('desktop:processes'),
   kill: (pids) => ipcRenderer.invoke('desktop:kill', pids),

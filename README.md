@@ -14,7 +14,7 @@
 
 ## 它做什么
 
-- 按文件名找全盘 `hyperframes.json` 收成库；启动先显示上次结果，扫描有进度、可取消。本机有 Everything 时会借它加速
+- 按文件名找全盘 `hyperframes.json` 收成库；启动先显示上次结果，扫描有进度、可取消。可以建立 NTFS 系统索引（需要一次管理员权限），不再依赖本机 Everything
 - 项目库用封面、时长、画幅、CLI pin、BRIEF 一句话编目
 - 选中工程后轻量预览，可拖动进度条
 - 一键在工程目录打开 Grok Build、ChatGPT 桌面、Codex CLI、Claude Code、Cursor
@@ -45,6 +45,15 @@ npm run dist
 本项目免费开源，欢迎使用、提 issue 和 PR。
 
 Mac 版做好后会发在本仓库。
+
+## 致谢
+
+NTFS 定位没有搬整套搜索软件进来。我们自己写了一个只找 `hyperframes.json` 的小助手，方法学自：
+
+- [MiniThing](https://github.com/AlanoSong/MiniThing) （MIT）：直接打开 NTFS 卷、读 USN / MFT、用父目录编号拼路径
+- [UFFS / UltraFastFileSearch](https://github.com/skyllc-ai/UltraFastFileSearch) （MPL-2.0）：不走文件夹遍历、直接读磁盘文件表的做法
+
+本项目不包含他们的源码，也不叫 UFFS。详细说明见 [THIRD_PARTY.md](THIRD_PARTY.md)。
 
 ## Contributors
 

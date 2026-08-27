@@ -7,6 +7,7 @@ const scan = require('./lib/scan.cjs');
 const scanSession = require('./lib/scan-session.cjs');
 const catalogCache = require('./lib/catalog-cache.cjs');
 const everything = require('./lib/everything.cjs');
+const usn = require('./lib/ntfs-usn.cjs');
 const processes = require('./lib/processes.cjs');
 const jobs = require('./lib/jobs.cjs');
 const agents = require('./lib/agents.cjs');
@@ -95,6 +96,18 @@ function broadcastScan(type, payload) {
 
 ipcMain.handle('desktop:catalog-cache', () => catalogCache.load(settingsDir()));
 ipcMain.handle('desktop:everything-status', () => everything.probe());
+ipcMain.handle('desktop:usn-status', () => {
+  const cached = usn.loadCache(settingsDir());
+  return {
+    helper: usn.helperPath(),
+    cached: !!(cached && cached.dirs && cached.dirs.length),
+    savedAt: cached && cached.savedAt,
+    dirs: cached && cached.dirs ? cached.dirs.length : 0
+  };
+});
+ipcMain.handle('desktop:usn-build', async () => {
+  return usn.locate({ userData: settingsDir(), elevate: true });
+});
 ipcMain.handle('desktop:scan-start', (_e, opts) => scanSession.start(settingsDir(), opts || {}, broadcastScan));
 ipcMain.handle('desktop:scan-cancel', () => ({ ok: scanSession.cancel(), running: scanSession.isRunning() }));
 ipcMain.handle('desktop:scan-status', () => ({ running: scanSession.isRunning() }));

@@ -5,6 +5,7 @@ const scan = require('./scan.cjs');
 const everything = require('./everything.cjs');
 const drives = require('./drives.cjs');
 const cache = require('./catalog-cache.cjs');
+const usn = require('./ntfs-usn.cjs');
 
 let active = null;
 
@@ -12,20 +13,53 @@ function sendEvent(send, type, payload) {
   if (typeof send === 'function') send(type, payload || {});
 }
 
-async function locateProjects(settings, signal, onProgress) {
+function applyScope(dirs, settings) {
+  const scope = settings.scanScope || 'all-fixed';
+  if (scope !== 'roots') return dirs;
+  return usn.filterToRoots(dirs, settings.scanRoots || []);
+}
+
+async function locateWithUsn(settings, signal, onProgress, userData) {
+  onProgress({ phase: 'locate', engine: 'usn', percent: 8, current: 'NTFS USN' });
+  const live = await usn.locate({ userData, elevate: false });
+  if (signal.aborted) return { engine: 'usn', dirs: [], usn: live, aborted: true };
+  if (live && live.ok && live.dirs && live.dirs.length) {
+    return { engine: 'usn', dirs: applyScope(live.dirs, settings), usn: live, visited: live.dirs.length };
+  }
+  const cached = usn.loadCache(userData);
+  if (cached && cached.dirs && cached.dirs.length) {
+    const existing = cached.dirs.filter((dir) => {
+      try { return fs.existsSync(dir); } catch (_) { return false; }
+    });
+    if (existing.length) {
+      return {
+        engine: 'usn-cache',
+        dirs: applyScope(existing, settings),
+        usn: Object.assign({}, live || {}, { cached: true, needsElevation: !!(live && live.needsElevation) }),
+        visited: existing.length
+      };
+    }
+  }
+  return { engine: 'usn', dirs: [], usn: live || { ok: false }, visited: 0 };
+}
+
+async function locateProjects(settings, signal, onProgress, userData) {
   const enginePref = settings.scanEngine || 'auto';
   const scope = settings.scanScope || 'all-fixed';
   const probe = everything.probe();
-  const wantEverything = enginePref === 'everything' || enginePref === 'auto' || enginePref === 'usn';
 
-  if (wantEverything && probe.esPath) {
+  if (enginePref === 'auto' || enginePref === 'usn') {
+    const found = await locateWithUsn(settings, signal, onProgress, userData);
+    if (signal.aborted) return found;
+    if (found.dirs.length) return Object.assign({ everything: probe }, found);
+  }
+
+  if (enginePref === 'everything' && probe.esPath) {
     onProgress({ phase: 'locate', engine: 'everything', percent: 8, current: 'Everything' });
     try {
       const dirs = await everything.queryHyperframes(probe.esPath);
       if (signal.aborted) return { engine: 'everything', dirs: [], everything: probe, aborted: true };
-      if (dirs.length || enginePref === 'everything') {
-        return { engine: 'everything', dirs, everything: probe, visited: dirs.length };
-      }
+      return { engine: 'everything', dirs: applyScope(dirs, settings), everything: probe, visited: dirs.length };
     } catch (err) {
       if (enginePref === 'everything') {
         return { engine: 'everything', dirs: [], everything: Object.assign({}, probe, { error: err.message }), visited: 0 };
@@ -103,9 +137,9 @@ async function run(userData, opts, send) {
   const started = Date.now();
   sendEvent(send, 'scan:progress', { phase: 'start', reason, percent: 2, engine: settings.scanEngine || 'auto' });
 
-  const loc = await locateProjects(settings, signal, (p) => sendEvent(send, 'scan:progress', p));
+  const loc = await locateProjects(settings, signal, (p) => sendEvent(send, 'scan:progress', p), userData);
   if (signal.aborted) {
-    sendEvent(send, 'scan:done', { cancelled: true, projects: null, engine: loc.engine, everything: loc.everything });
+    sendEvent(send, 'scan:done', { cancelled: true, projects: null, engine: loc.engine, everything: loc.everything, usn: loc.usn });
     return;
   }
 
@@ -131,7 +165,7 @@ async function run(userData, opts, send) {
   });
 
   if (signal.aborted) {
-    sendEvent(send, 'scan:done', { cancelled: true, projects, engine: loc.engine, everything: loc.everything });
+    sendEvent(send, 'scan:done', { cancelled: true, projects, engine: loc.engine, everything: loc.everything, usn: loc.usn });
     return;
   }
 
@@ -142,6 +176,7 @@ async function run(userData, opts, send) {
     engine: loc.engine,
     scope: settings.scanScope || 'all-fixed',
     everything: loc.everything,
+    usn: loc.usn || null,
     visited: loc.visited || 0,
     elapsedMs: Date.now() - started,
     reason

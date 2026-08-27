@@ -359,11 +359,13 @@
             <div class="field">
               <label data-i18n="set.scanEngine">扫描引擎</label>
               <select id="set-scan-engine">
-                <option value="auto" selected data-i18n="set.engineAuto">自动（有 Everything 就用它）</option>
-                <option value="everything" data-i18n="set.engineEverything">Everything</option>
+                <option value="auto" selected data-i18n="set.engineAuto">自动（NTFS 系统索引，没有再遍历）</option>
+                <option value="usn" data-i18n="set.engineUsn">NTFS 系统索引</option>
                 <option value="walk" data-i18n="set.engineWalk">文件夹遍历</option>
+                <option value="everything" data-i18n="set.engineEverything">Everything（可选）</option>
               </select>
-              <div class="side-hint" id="everything-status" data-i18n="set.everythingMissing">未检测到 Everything</div>
+              <div class="side-hint" id="usn-status" data-i18n="set.usnHint">第一次建立索引需要管理员权限，之后扫描会很快。</div>
+              <button type="button" class="btn-amber" id="btn-build-index" data-build-index="1" data-i18n="set.buildIndex">建立系统索引</button>
             </div>
             <div class="field">
               <label data-i18n="set.cover">项目封面</label>
@@ -458,6 +460,7 @@
           <div class="diag-body" id="diag-body" data-i18n="diag.none">扫描和预览正常时，这里会保持安静。</div>
           <div class="diag-actions">
             <button type="button" class="btn-amber" id="diag-fix-scan" data-fix-scan="1" data-i18n="diag.fixScan">立即扫描</button>
+            <button type="button" class="btn-amber" id="diag-build-index" data-build-index="1" data-i18n="diag.fixIndex">建立系统索引</button>
             <button type="button" class="btn" id="diag-fix-preview" data-fix-preview="1" data-i18n="diag.fixPreview">重启预览</button>
             <button type="button" class="btn" data-kill-orphans="1" data-i18n="insp.clean">一键清理</button>
             <button type="button" class="btn-ghost" data-reset-app="1" data-i18n="diag.reset">重置软件</button>

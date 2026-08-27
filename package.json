@@ -1,7 +1,7 @@
 {
   "name": "hyperframesspace",
   "productName": "HyperFramesSpace",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "description": "HyperFrames 工作台 · Windows 桌面版",
   "author": "HyperFramesSpace",
@@ -10,8 +10,9 @@
     "start": "electron .",
     "app": "electron .",
     "test": "node tests/helpers.test.cjs && node tests/scan-engine.test.cjs",
-    "dist": "electron-builder --win portable",
-    "dist:dir": "electron-builder --win dir"
+    "dist": "node native/build-helper.cjs && electron-builder --win portable",
+    "dist:dir": "electron-builder --win dir",
+    "build:helper": "node native/build-helper.cjs"
   },
   "devDependencies": {
     "electron": "^37.10.3",
@@ -53,6 +54,12 @@
     },
     "portable": {
       "artifactName": "HyperFramesSpace.exe"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "native/hf-ntfs-locate.exe",
+        "to": "hf-ntfs-locate.exe"
+      }
+    ]
   }
 }
