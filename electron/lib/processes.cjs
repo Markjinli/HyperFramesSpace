@@ -6,7 +6,7 @@ function execPs(script, timeout) {
     execFile(
       'powershell.exe',
       ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
-      { windowsHide: true, timeout: timeout || 12000, maxBuffer: 4 * 1024 * 1024 },
+      { windowsHide: true, timeout: timeout || 8000, maxBuffer: 4 * 1024 * 1024 },
       (err, stdout, stderr) => {
         if (err) return reject(new Error(stderr || err.message));
         resolve(String(stdout || '').trim());
@@ -94,7 +94,7 @@ async function listProcesses() {
     '$procs | Select-Object ProcessId, Name, CommandLine, WorkingSetSize, CreationDate | ConvertTo-Json -Compress'
   ].join('; ');
   let raw = '[]';
-  try { raw = await execPs(script, 12000); } catch (_) { raw = '[]'; }
+  try { raw = await execPs(script, 5000); } catch (_) { raw = '[]'; }
   let rows = [];
   try { rows = raw ? JSON.parse(raw) : []; } catch (_) { rows = []; }
   if (rows && !Array.isArray(rows)) rows = [rows];
@@ -146,13 +146,16 @@ function memPct() {
   return Math.round(((total - os.freemem()) / total) * 100);
 }
 
-async function occupancy(procs) {
+async function occupancy(procs, opts) {
   const list = procs || [];
+  opts = opts || {};
   const host = hostResources();
   const cpu = sampleCpu();
   const mem = memPct();
   let gpuInfo = { gpu: null };
-  try { gpuInfo = await sampleGpu(); } catch (_) {}
+  if (opts.gpu) {
+    try { gpuInfo = await sampleGpu(); } catch (_) {}
+  }
   const hfMem = list.reduce((s, p) => s + (Number(p.memMb) || 0), 0);
   const rendering = list.some((p) => /encode|render-chrome|snapshot/.test(p.kind) && !p.paused);
   return {

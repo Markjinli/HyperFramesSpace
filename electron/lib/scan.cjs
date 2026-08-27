@@ -135,16 +135,28 @@ function collectImages(dir, acc, depth) {
   });
 }
 
-function coverSources(dir) {
+function listImagesShallow(dir, max) {
   const acc = [];
+  let ents;
+  try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return acc; }
+  ents.sort(function (a, b) { return a.name.localeCompare(b.name); });
+  ents.forEach(function (ent) {
+    if (acc.length >= max) return;
+    if (ent.isDirectory()) return;
+    if (/\.(png|jpe?g|webp|gif)$/i.test(ent.name) && !/finding-/i.test(ent.name)) {
+      acc.push(path.join(dir, ent.name));
+    }
+  });
+  return acc;
+}
+
+function coverSources(dir) {
   const shots = path.join(dir, 'snapshots');
   const thumbs = path.join(dir, '.thumbnails');
-  const assets = path.join(dir, 'assets');
-  collectImages(shots, acc, 2);
-  if (acc.length < 3) collectImages(thumbs, acc, 1);
-  if (acc.length < 3) collectImages(path.join(assets, 'thumbs'), acc, 2);
-  if (acc.length < 3) collectImages(assets, acc, 1);
-  return acc.slice(0, 12);
+  let acc = listImagesShallow(shots, 9);
+  if (!acc.length) acc = listImagesShallow(thumbs, 4);
+  if (!acc.length) acc = listImagesShallow(path.join(dir, 'assets'), 4);
+  return acc.slice(0, 9);
 }
 
 function countFindings(dir) {

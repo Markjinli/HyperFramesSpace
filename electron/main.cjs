@@ -119,10 +119,10 @@ ipcMain.handle('desktop:scan', async (_e, roots) => {
   return { projects, scanRoots: list, added: [], suggested: [] };
 });
 
-ipcMain.handle('desktop:occupancy', async () => processes.occupancy([]));
+ipcMain.handle('desktop:occupancy', async () => processes.occupancy([], { gpu: false }));
 ipcMain.handle('desktop:processes', async () => {
   const list = await processes.listProcesses();
-  const load = await processes.occupancy(list);
+  const load = await processes.occupancy(list, { gpu: false });
   return { processes: list, host: processes.hostResources(), load };
 });
 

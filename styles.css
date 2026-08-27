@@ -856,3 +856,9 @@ h4 .add-btn { float: right; margin-top: -2px; }
   font-size: 11px;
   padding: 4px 8px;
 }
+
+
+.card {
+  content-visibility: auto;
+  contain-intrinsic-size: 240px 280px;
+}

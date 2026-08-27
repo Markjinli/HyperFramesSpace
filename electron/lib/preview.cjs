@@ -93,7 +93,7 @@ function playerPage(project) {
     }
     player.addEventListener('timeupdate', paint);
     player.addEventListener('loadedmetadata', paint);
-    setInterval(paint, 200);
+    setInterval(paint, 500);
     pp.addEventListener('click', (e) => {
       e.stopPropagation();
       if (player.paused) player.play(); else player.pause();

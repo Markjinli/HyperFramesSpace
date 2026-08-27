@@ -39,7 +39,8 @@
     });
   }
 
-  function applyProjects(projects, stampScan) {
+  var projectRenderTimer = 0;
+  function applyProjects(projects, stampScan, immediate) {
     liveProjects = (projects || []).slice();
     window.Framespace.setCatalog(liveProjects);
     var ui = window.Framespace.getUi();
@@ -50,7 +51,16 @@
       }
       if (stampScan) ui.state.lastScanAt = Date.now();
     }
-    window.Framespace.render();
+    function paint() {
+      projectRenderTimer = 0;
+      window.Framespace.render();
+    }
+    if (immediate) {
+      if (projectRenderTimer) clearTimeout(projectRenderTimer);
+      paint();
+    } else if (!projectRenderTimer) {
+      projectRenderTimer = setTimeout(paint, 160);
+    }
     var roots = document.getElementById('scan-roots');
     if (roots && window.__fsSettings) {
       roots.innerHTML = (window.__fsSettings.scanRoots || []).map(function (r) {
@@ -112,7 +122,7 @@
   function finishScan(pack) {
     scanning = false;
     setScanProgress(null);
-    if (pack && pack.projects) applyProjects(pack.projects, !pack.cancelled);
+    if (pack && pack.projects) applyProjects(pack.projects, !pack.cancelled, true);
     if (window.__fsSettings) {
       window.__fsSettings.lastEngine = pack && pack.engine;
     }
@@ -304,7 +314,7 @@
           ui.state.autoScanOnLaunch = false;
         }
       }
-      applyProjects([], false);
+      applyProjects([], false, true);
       setDiagnosis({ scanNote: t('diag.needScan'), canFixScan: true, canBuildIndex: true });
       toast(t('diag.resetDone'));
     },
@@ -431,7 +441,7 @@
       } else if (type === 'scan:item' && payload.project) {
         if (payload.index === 1) liveProjects = [];
         liveProjects.push(payload.project);
-        applyProjects(liveProjects, false);
+        applyProjects(liveProjects, false, false);
       } else if (type === 'scan:done') {
         finishScan(payload);
       } else if (type === 'scan:error') {
@@ -474,7 +484,7 @@
     var cache = null;
     try { cache = await api.catalogCache(); } catch (_) {}
     if (cache && cache.projects && cache.projects.length) {
-      applyProjects(cache.projects, false);
+      applyProjects(cache.projects, false, true);
       setDiagnosis({
         scanNote: t('diag.cacheReady', { n: cache.projects.length }),
         canFixScan: false
@@ -486,8 +496,15 @@
     if (settings.autoScanOnLaunch) startScan('boot');
     refreshDoctor();
     refreshOccupancy();
-    setInterval(refreshOccupancy, 2000);
-    setInterval(refreshProcesses, 8000);
+    setInterval(function () {
+      if (document.hidden) return;
+      refreshOccupancy();
+    }, 10000);
+    setInterval(function () {
+      if (document.hidden) return;
+      var ui = window.Framespace.getUi && window.Framespace.getUi();
+      if (ui && ui.state && ui.state.view === 'processes') refreshProcesses();
+    }, 20000);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

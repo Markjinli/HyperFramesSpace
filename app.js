@@ -992,13 +992,13 @@
       hoverShowMs: 280,
       hoverHideMs: 200,
       cardSize: 'm',
-      scanIntervalSec: 60,
+      scanIntervalSec: 0,
       lastScanAt: 0,
       autoScanOnLaunch: false,
       scanScope: 'all-fixed',
       scanEngine: 'auto',
       scanProgress: null,
-      autoSnapshot: true,
+      autoSnapshot: false,
       processes: cloneProcesses(PROCESS_SEED),
       skills: cloneSkills(SKILL_SEED),
       hotSkills: parseSkillCatalog(HOT_SKILL_CATALOG),
@@ -1270,7 +1270,7 @@
     var grid = $('#project-list');
     var rows = $('#project-rows');
     var count = $('#lib-count');
-    var layout = ui.state.coverLayout || '9';
+    var layout = '1';
     if (count) {
       var ctx = t('all');
       if (ui.state.folder) ctx = ui.state.folder.split('\\').pop() || ui.state.folder;
@@ -1873,6 +1873,35 @@
     return CATALOG;
   }
 
+  var renderQueued = 0;
+  function scheduleRender() {
+    if (renderQueued) return;
+    renderQueued = 1;
+    var raf = global.requestAnimationFrame || function (fn) { global.setTimeout(fn, 16); };
+    raf(function () {
+      renderQueued = 0;
+      render();
+    });
+  }
+
+  function patchLoadBars(load) {
+    if (!load) return;
+    function bar(id, pct) {
+      var el = $(id);
+      if (el) el.style.width = Math.max(0, Math.min(100, Number(pct) || 0)) + '%';
+    }
+    function txt(id, val) {
+      var el = $(id);
+      if (el) el.textContent = val;
+    }
+    bar('#bar-cpu', load.cpu);
+    bar('#bar-mem', load.mem);
+    bar('#bar-gpu', load.gpu);
+    txt('#pct-cpu', (load.cpu || 0) + '%');
+    txt('#pct-mem', (load.mem || 0) + '%');
+    txt('#pct-gpu', load.gpuKnown ? ((load.gpu || 0) + '%') : t('dyn.gpuUnknown'));
+  }
+
   function applyDesktopState(payload) {
     payload = payload || {};
     if (!ui.state) ui.state = createViewState();
@@ -1887,7 +1916,34 @@
     if (payload.lastScanAt) ui.state.lastScanAt = payload.lastScanAt;
     if (payload.diagnosis) ui.state.diagnosis = payload.diagnosis;
     if (payload.scanProgress !== undefined) ui.state.scanProgress = payload.scanProgress;
-    render();
+    var keys = [];
+    for (var k in payload) keys.push(k);
+    if (keys.length === 1 && payload.load) {
+      patchLoadBars(payload.load);
+      return;
+    }
+    if (keys.length === 1 && payload.scanProgress !== undefined) {
+      renderChrome();
+      return;
+    }
+    if (keys.length === 1 && payload.diagnosis) {
+      renderDiagnosis();
+      return;
+    }
+    if (keys.length === 1 && payload.jobs) {
+      renderJobs();
+      return;
+    }
+    if (keys.length === 1 && payload.processes) {
+      renderProcesses();
+      return;
+    }
+    if (keys.length === 2 && payload.processes && payload.load) {
+      patchLoadBars(payload.load);
+      renderProcesses();
+      return;
+    }
+    scheduleRender();
   }
 
   function renderJobs() {
