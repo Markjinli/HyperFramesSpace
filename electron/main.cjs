@@ -15,6 +15,7 @@ const doctor = require('./lib/doctor.cjs');
 const preview = require('./lib/preview.cjs');
 
 app.setName('HyperFramesSpace');
+app.setAppUserModelId('local.hyperframesspace.app');
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -35,14 +36,21 @@ function settingsDir() {
   return app.getPath('userData');
 }
 
+function appIconPath() {
+  const unpacked = path.join(process.resourcesPath || '', 'icon.ico');
+  if (unpacked && fs.existsSync(unpacked)) return unpacked;
+  return path.join(__dirname, '..', 'assets', 'icon.ico');
+}
+
 function createWindow() {
+  const iconPath = appIconPath();
   mainWindow = new BrowserWindow({
     width: 1480,
     height: 920,
     minWidth: 1120,
     minHeight: 720,
     backgroundColor: '#0a0d12',
-    icon: path.join(__dirname, '..', 'assets', 'icon.ico'),
+    icon: iconPath,
     frame: false,
     show: false,
     title: 'HyperFramesSpace',
@@ -54,8 +62,26 @@ function createWindow() {
       webSecurity: false
     }
   });
+  mainWindow.setTitle('HyperFramesSpace');
+  if (process.platform === 'win32') {
+    try {
+      mainWindow.setAppDetails({
+        appId: 'local.hyperframesspace.app',
+        appIconPath: iconPath,
+        relaunchCommand: '"' + process.execPath + '"',
+        relaunchDisplayName: 'HyperFramesSpace'
+      });
+    } catch (_) {}
+  }
   mainWindow.loadFile(path.join(__dirname, '..', 'index.html'));
-  mainWindow.once('ready-to-show', () => mainWindow.show());
+  mainWindow.on('page-title-updated', (event) => {
+    event.preventDefault();
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setTitle('HyperFramesSpace');
+  });
+  mainWindow.once('ready-to-show', () => {
+    if (iconPath && fs.existsSync(iconPath)) mainWindow.setIcon(iconPath);
+    mainWindow.show();
+  });
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 

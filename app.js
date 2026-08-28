@@ -637,23 +637,65 @@
   }
 
   function hoverShowDelayMs() {
-    var n = ui && ui.state ? Number(ui.state.hoverShowMs) : 280;
-    return isFinite(n) && n >= 0 ? n : 280;
+    var n = ui && ui.state ? Number(ui.state.hoverShowMs) : 450;
+    return isFinite(n) && n >= 0 ? n : 450;
   }
 
   function hoverHideDelayMs() {
-    var n = ui && ui.state ? Number(ui.state.hoverHideMs) : 200;
-    return isFinite(n) && n >= 0 ? n : 200;
+    var n = ui && ui.state ? Number(ui.state.hoverHideMs) : 280;
+    return isFinite(n) && n >= 0 ? n : 280;
+  }
+
+  function hoverSwitchDelayMs() {
+    return 80;
   }
 
   function clampHoverSize(width, height) {
-    var w = Number(width) || 520;
-    var h = Number(height) || 340;
-    if (w < 360) w = 360;
-    if (h < 200) h = 200;
-    if (w > 900) w = 900;
+    var w = Number(width) || 340;
+    var h = Number(height) || 240;
+    if (w < 280) w = 280;
+    if (h < 160) h = 160;
+    if (w > 520) w = 520;
     if (h > 720) h = 720;
     return { width: w, height: h };
+  }
+
+  function placeHoverCard(rect, size, viewport) {
+    var gap = 10;
+    var w = size.width;
+    var h = size.height;
+    var vw = viewport.width;
+    var vh = viewport.height;
+    var side = 'right';
+    var left = rect.right + gap;
+    if (left + w > vw - 12) {
+      left = rect.left - w - gap;
+      side = 'left';
+    }
+    if (left < 8) left = 8;
+    if (left + w > vw - 8) left = Math.max(8, vw - w - 8);
+    var top = rect.top;
+    if (top + h > vh - 12) top = vh - h - 12;
+    if (top < 48) top = 48;
+    var bridgeTop = Math.min(rect.top, top);
+    var bridgeBottom = Math.max(rect.bottom, top + h);
+    var bridge;
+    if (side === 'right') {
+      bridge = {
+        left: Math.min(rect.right, left) - 2,
+        top: bridgeTop,
+        width: Math.max(8, Math.abs(left - rect.right) + 4),
+        height: Math.max(12, bridgeBottom - bridgeTop)
+      };
+    } else {
+      bridge = {
+        left: Math.min(rect.left, left + w) - 2,
+        top: bridgeTop,
+        width: Math.max(8, Math.abs(rect.left - (left + w)) + 4),
+        height: Math.max(12, bridgeBottom - bridgeTop)
+      };
+    }
+    return { left: left, top: top, side: side, bridge: bridge };
   }
 
   function cardMinPx(size) {
@@ -981,16 +1023,16 @@
       sidebarMode: 'custom',
       customCollections: seedCustomCollections(CATALOG),
       pinnedFolders: [],
-      hoverWidth: 460,
-      hoverHeight: 318,
+      hoverWidth: 340,
+      hoverHeight: 240,
       layout: 'grid',
       tab: 'overview',
       lastCommand: null,
       agentModal: null,
       coverLayout: '9',
       coverAtSec: 'auto',
-      hoverShowMs: 280,
-      hoverHideMs: 200,
+      hoverShowMs: 450,
+      hoverHideMs: 280,
       cardSize: 'm',
       scanIntervalSec: 0,
       lastScanAt: 0,
@@ -1178,7 +1220,9 @@
     folderDisplayName: folderDisplayName,
     hoverShowDelayMs: hoverShowDelayMs,
     hoverHideDelayMs: hoverHideDelayMs,
+    hoverSwitchDelayMs: hoverSwitchDelayMs,
     clampHoverSize: clampHoverSize,
+    placeHoverCard: placeHoverCard,
     cardMinPx: cardMinPx,
     parseScanInterval: parseScanInterval,
     nextScanAt: nextScanAt,
@@ -1644,9 +1688,9 @@
       coverAt.value = String(ui.state.coverAtSec == null ? 'auto' : ui.state.coverAtSec);
     }
     var hoverShow = $('#set-hover-show');
-    if (hoverShow) hoverShow.value = String(ui.state.hoverShowMs == null ? 280 : ui.state.hoverShowMs);
+    if (hoverShow) hoverShow.value = String(ui.state.hoverShowMs == null ? 450 : ui.state.hoverShowMs);
     var hoverHide = $('#set-hover-hide');
-    if (hoverHide) hoverHide.value = String(ui.state.hoverHideMs == null ? 200 : ui.state.hoverHideMs);
+    if (hoverHide) hoverHide.value = String(ui.state.hoverHideMs == null ? 280 : ui.state.hoverHideMs);
     var autoScan = $('#set-auto-scan');
     if (autoScan) autoScan.checked = !!ui.state.autoScanOnLaunch;
     var scopeSel = $('#set-scan-scope');
@@ -1811,60 +1855,78 @@
     if (pre) pre.textContent = modal.command;
   }
 
-  function showHover(id, rect) {
-    var pop = $('#hover-preview');
-    var inner = $('#hover-preview-inner');
+  var hoverAnchor = null;
+
+  function applyHoverPlacement(pop, rect) {
+    if (!pop || !rect || typeof window === "undefined") return;
+    var placed = placeHoverCard(
+      rect,
+      { width: pop.offsetWidth || 340, height: pop.offsetHeight || 240 },
+      { width: window.innerWidth, height: window.innerHeight }
+    );
+    pop.style.left = placed.left + "px";
+    pop.style.top = placed.top + "px";
+    pop.setAttribute("data-side", placed.side);
+    var bridge = $("#hover-bridge");
+    if (bridge && placed.bridge) {
+      bridge.style.left = placed.bridge.left + "px";
+      bridge.style.top = placed.bridge.top + "px";
+      bridge.style.width = placed.bridge.width + "px";
+      bridge.style.height = placed.bridge.height + "px";
+      bridge.classList.add("is-on");
+    }
+  }
+
+  function showHover(id, rect, anchor) {
+    var pop = $("#hover-preview");
+    var inner = $("#hover-preview-inner");
     if (!pop || !inner) return;
     var p = getProject(CATALOG, id);
-    if (!p) { pop.classList.remove('is-on'); return; }
-    if (pop.getAttribute('data-for') !== id) {
-      pop.setAttribute('data-for', id);
-      var hero = coverCells(p, '1')[0];
-      var strip = coverCells(p, '9');
-      var heroSrc = hero && hero.src ? hero.src : '';
+    if (!p) {
+      hideHover();
+      return;
+    }
+    hoverAnchor = anchor || hoverAnchor;
+    if (pop.getAttribute("data-for") !== id) {
+      pop.setAttribute("data-for", id);
+      var hero = coverCells(p, "1")[0];
+      var strip = coverCells(p, "9");
+      var heroSrc = hero && hero.src ? hero.src : "";
       var img = heroSrc
-        ? '<div class="hover-hero" id="hover-hero" style="background-image:url(\'' + heroSrc.replace(/'/g, '%27') + '\')"></div>'
+        ? '<div class="hover-hero" id="hover-hero" style="background-image:url(\'' + heroSrc.replace(/'/g, "%27") + '\')"></div>'
         : '<div class="hover-hero poster-instrument" id="hover-hero"></div>';
       inner.innerHTML =
         img +
         '<div class="hover-body">' +
-          '<b>' + escapeHtml(p.name) + '</b>' +
-          '<div class="meta" id="hover-hero-meta">' + formatTime(hero && hero.t) + ' · ' + p.duration + 's</div>' +
+          "<b>" + escapeHtml(p.name) + "</b>" +
+          '<div class="meta" id="hover-hero-meta">' + formatTime(hero && hero.t) + " · " + p.duration + "s</div>" +
           '<div class="hover-strip">' + strip.map(function (c) {
-            var src = c.src || '';
-            var on = heroSrc && src === heroSrc ? ' is-on' : '';
-            var st = src ? "background-image:url('" + src.replace(/'/g, '%27') + "')" : '';
-            return '<span class="hover-frame' + on + '" data-hover-frame="' + escapeHtml(src) + '" data-hover-t="' + escapeHtml(String(c.t)) + '" style="' + st + '"><em>' + formatTime(c.t) + '</em></span>';
-          }).join('') + '</div>' +
-        '</div>';
+            var src = c.src || "";
+            var on = heroSrc && src === heroSrc ? " is-on" : "";
+            var st = src ? "background-image:url('" + src.replace(/'/g, "%27") + "')" : "";
+            return '<span class="hover-frame' + on + '" data-hover-frame="' + escapeHtml(src) + '" data-hover-t="' + escapeHtml(String(c.t)) + '" style="' + st + '"><em>' + formatTime(c.t) + "</em></span>";
+          }).join("") + "</div>" +
+        "</div>";
     }
     var size = clampHoverSize(ui.state.hoverWidth, ui.state.hoverHeight);
-    pop.style.width = size.width + 'px';
-    pop.style.height = size.height + 'px';
-    var w = size.width;
-    var left = rect ? rect.right + 12 : 80;
-    if (typeof window !== 'undefined') {
-      if (left + w > window.innerWidth - 16) left = (rect ? rect.left - w - 12 : 16);
-      if (left < 8) left = 8;
-    }
-    var top = rect ? rect.top : 64;
-    if (typeof window !== 'undefined' && top + size.height > window.innerHeight) {
-      top = window.innerHeight - size.height - 16;
-    }
-    if (top < 48) top = 48;
-    pop.style.left = left + 'px';
-    pop.style.top = top + 'px';
-    pop.classList.add('is-on');
+    pop.style.width = size.width + "px";
+    pop.style.height = "auto";
+    pop.classList.add("is-on");
+    applyHoverPlacement(pop, rect || (hoverAnchor && hoverAnchor.getBoundingClientRect ? hoverAnchor.getBoundingClientRect() : null));
   }
 
   function hideHover() {
-    var pop = $('#hover-preview');
-    if (pop) pop.classList.remove('is-on');
+    var pop = $("#hover-preview");
+    var bridge = $("#hover-bridge");
+    if (pop) pop.classList.remove("is-on");
+    if (bridge) bridge.classList.remove("is-on");
+    hoverAnchor = null;
   }
 
   function hoverContains(el) {
-    var pop = $('#hover-preview');
-    return !!(pop && el && pop.contains(el));
+    var pop = $("#hover-preview");
+    var bridge = $("#hover-bridge");
+    return !!(el && ((pop && pop.contains(el)) || (bridge && bridge.contains(el))));
   }
 
   function setCatalog(projects) {
@@ -2253,6 +2315,7 @@
       if (cardSize) {
         ui.state.cardSize = cardSize.getAttribute('data-card-size');
         render();
+        if (global.FramespaceDesktop && global.FramespaceDesktop.persist) global.FramespaceDesktop.persist();
         return;
       }
       var coverLay = t.closest('[data-cover-layout]');
@@ -2499,6 +2562,28 @@
         if (global.FramespaceDesktop && global.FramespaceDesktop.persist) global.FramespaceDesktop.persist();
       });
     }
+    var coverAtSel = $('#set-cover-at', root);
+    if (coverAtSel) {
+      coverAtSel.addEventListener('change', function () {
+        ui.state.coverAtSec = coverAtSel.value;
+        render();
+        if (global.FramespaceDesktop && global.FramespaceDesktop.persist) global.FramespaceDesktop.persist();
+      });
+    }
+    var hoverShowSel = $('#set-hover-show', root);
+    if (hoverShowSel) {
+      hoverShowSel.addEventListener('change', function () {
+        ui.state.hoverShowMs = Number(hoverShowSel.value);
+        if (global.FramespaceDesktop && global.FramespaceDesktop.persist) global.FramespaceDesktop.persist();
+      });
+    }
+    var hoverHideSel = $('#set-hover-hide', root);
+    if (hoverHideSel) {
+      hoverHideSel.addEventListener('change', function () {
+        ui.state.hoverHideMs = Number(hoverHideSel.value);
+        if (global.FramespaceDesktop && global.FramespaceDesktop.persist) global.FramespaceDesktop.persist();
+      });
+    }
     var scanSel = $('#set-scan-interval', root);
     if (scanSel) {
       scanSel.addEventListener('change', function () {
@@ -2612,35 +2697,60 @@
         hideHover();
       }, hoverHideDelayMs());
     }
+    function pointerInHoverZone(el) {
+      if (!el) return false;
+      if (hoverContains(el)) return true;
+      if (hoverAnchor && hoverAnchor.contains && hoverAnchor.contains(el)) return true;
+      return !!(el.closest && el.closest('[data-hover-project]'));
+    }
     root.addEventListener('mouseover', function (ev) {
       var card = ev.target && ev.target.closest && ev.target.closest('[data-hover-project]');
       if (!card || ui.state.view !== 'library') return;
       if (ev.target.closest('[data-drop-collection]') && ev.target.closest('[data-collection="all"]')) return;
+      var from = ev.relatedTarget;
+      if (from && card.contains(from)) return;
       var id = card.getAttribute('data-hover-project');
+      var pop = $('#hover-preview');
+      if (pop && pop.classList.contains('is-on') && pop.getAttribute('data-for') === id) {
+        hoverAnchor = card;
+        cancelHoverTimers();
+        applyHoverPlacement(pop, card.getBoundingClientRect());
+        return;
+      }
       cancelHoverTimers();
+      var delay = (pop && pop.classList.contains('is-on')) ? hoverSwitchDelayMs() : hoverShowDelayMs();
       hoverShowTimer = global.setTimeout(function () {
-        showHover(id, card.getBoundingClientRect());
-      }, hoverShowDelayMs());
+        showHover(id, card.getBoundingClientRect(), card);
+      }, delay);
     });
     root.addEventListener('mouseout', function (ev) {
-      var card = ev.target && ev.target.closest && ev.target.closest('[data-hover-project]');
-      var rel = ev.relatedTarget;
-      if (hoverContains(rel)) {
+      var from = ev.target;
+      var fromZone = hoverContains(from) || (from && from.closest && from.closest('[data-hover-project]')) || (hoverAnchor && hoverAnchor.contains && hoverAnchor.contains(from));
+      if (!fromZone) return;
+      if (pointerInHoverZone(ev.relatedTarget)) {
         cancelHoverTimers();
         return;
       }
-      if (card && rel && card.contains(rel)) return;
       global.clearTimeout(hoverShowTimer);
       scheduleHideHover();
     });
-    var pop = $('#hover-preview');
-    if (pop) {
-      pop.addEventListener('mouseenter', function () {
+    function bindHoverSurface(el) {
+      if (!el) return;
+      el.addEventListener('mouseenter', function () {
         cancelHoverTimers();
       });
-      pop.addEventListener('mouseleave', function () {
+      el.addEventListener('mouseleave', function (ev) {
+        if (pointerInHoverZone(ev.relatedTarget)) {
+          cancelHoverTimers();
+          return;
+        }
         scheduleHideHover();
       });
+    }
+    var pop = $('#hover-preview');
+    bindHoverSurface(pop);
+    bindHoverSurface($('#hover-bridge'));
+    if (pop) {
       var handle = $('#hover-resizer');
       if (handle) {
         handle.addEventListener('mousedown', function (ev) {
@@ -2648,25 +2758,38 @@
           ev.stopPropagation();
           cancelHoverTimers();
           var startX = ev.clientX;
-          var startY = ev.clientY;
           var startW = pop.offsetWidth;
-          var startH = pop.offsetHeight;
           function move(e) {
-            var size = clampHoverSize(startW + (e.clientX - startX), startH + (e.clientY - startY));
+            var size = clampHoverSize(startW + (e.clientX - startX), 240);
             ui.state.hoverWidth = size.width;
-            ui.state.hoverHeight = size.height;
             pop.style.width = size.width + 'px';
-            pop.style.height = size.height + 'px';
+            pop.style.height = 'auto';
+            if (hoverAnchor && hoverAnchor.getBoundingClientRect) {
+              applyHoverPlacement(pop, hoverAnchor.getBoundingClientRect());
+            }
           }
           function up() {
             document.removeEventListener('mousemove', move);
             document.removeEventListener('mouseup', up);
+            if (global.FramespaceDesktop && global.FramespaceDesktop.persist) global.FramespaceDesktop.persist();
           }
           document.addEventListener('mousemove', move);
           document.addEventListener('mouseup', up);
         });
       }
     }
+    document.addEventListener('scroll', function () {
+      if ($('#hover-preview') && $('#hover-preview').classList.contains('is-on')) {
+        cancelHoverTimers();
+        hideHover();
+      }
+    }, true);
+    document.addEventListener('mousedown', function (ev) {
+      var t = ev.target;
+      if (hoverContains(t)) return;
+      if (t && t.closest && t.closest('[data-hover-project]')) return;
+      if ($('#hover-preview') && $('#hover-preview').classList.contains('is-on')) hideHover();
+    });
 
     root.addEventListener('dragstart', function (ev) {
       var card = ev.target && ev.target.closest && ev.target.closest('[data-drag-project]');

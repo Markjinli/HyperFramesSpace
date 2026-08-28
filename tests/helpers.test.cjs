@@ -30,7 +30,9 @@ const {
   isFolderPinned,
   hoverHideDelayMs,
   hoverShowDelayMs,
+  hoverSwitchDelayMs,
   clampHoverSize,
+  placeHoverCard,
   cardMinPx,
   parseScanInterval,
   nextScanAt,
@@ -313,15 +315,22 @@ check('folder tree flattens nested HyperFrames projects', function () {
   assert.strictEqual(un.length, 0);
 });
 
-check('hover hide delay is 1s and size clamps', function () {
-  assert.strictEqual(hoverHideDelayMs(), 200);
-  assert.strictEqual(hoverShowDelayMs(), 280);
+check('hover card delays and size clamps', function () {
+  assert.strictEqual(hoverHideDelayMs(), 280);
+  assert.strictEqual(hoverShowDelayMs(), 450);
+  assert.strictEqual(hoverSwitchDelayMs(), 80);
   var s = clampHoverSize(120, 50);
-  assert.ok(s.width >= 360);
-  assert.ok(s.height >= 200);
+  assert.ok(s.width >= 280);
+  assert.ok(s.height >= 160);
   var big = clampHoverSize(4000, 4000);
-  assert.ok(big.width <= 900);
+  assert.ok(big.width <= 520);
   assert.ok(big.height <= 720);
+  var right = placeHoverCard({ left: 40, right: 220, top: 80, bottom: 200 }, { width: 340, height: 240 }, { width: 1280, height: 800 });
+  assert.strictEqual(right.side, 'right');
+  assert.ok(right.left >= 220);
+  var left = placeHoverCard({ left: 900, right: 1200, top: 80, bottom: 200 }, { width: 340, height: 240 }, { width: 1280, height: 800 });
+  assert.strictEqual(left.side, 'left');
+  assert.ok(left.left + 340 <= 900);
 });
 
 check('skill catalog parse, rate, note, delete, hot install', function () {
@@ -368,6 +377,7 @@ check('HTML mockup source has library / workbench / agent labels', function () {
   assert.ok(html.indexOf('进程') !== -1);
   assert.ok(html.indexOf('定时扫描') !== -1);
   assert.ok(html.indexOf('id="hover-preview"') !== -1);
+  assert.ok(html.indexOf('id="hover-bridge"') !== -1);
   assert.ok(html.indexOf('id="series-list"') !== -1);
   assert.ok(html.indexOf('自定义项目') !== -1);
   assert.ok(html.indexOf('data-sidebar-mode="folders"') !== -1);

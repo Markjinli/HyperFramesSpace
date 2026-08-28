@@ -461,8 +461,8 @@
     var initial = window.Framespace.createViewState({
       coverLayout: settings.coverLayout || '9',
       coverAtSec: settings.coverAtSec == null ? 'auto' : settings.coverAtSec,
-      hoverShowMs: settings.hoverShowMs == null ? 280 : settings.hoverShowMs,
-      hoverHideMs: settings.hoverHideMs == null ? 200 : settings.hoverHideMs,
+      hoverShowMs: settings.hoverShowMs == null ? 450 : settings.hoverShowMs,
+      hoverHideMs: settings.hoverHideMs == null ? 280 : settings.hoverHideMs,
       cardSize: settings.cardSize || 'm',
       scanIntervalSec: settings.scanIntervalSec || 0,
       autoScanOnLaunch: !!settings.autoScanOnLaunch,

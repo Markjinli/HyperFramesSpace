@@ -11,8 +11,8 @@ const DEFAULTS = {
   terminal: 'wt',
   coverLayout: '9',
   coverAtSec: 'auto',
-  hoverShowMs: 280,
-  hoverHideMs: 200,
+  hoverShowMs: 450,
+  hoverHideMs: 280,
   cardSize: 'm',
   scanIntervalSec: 0,
   autoScanOnLaunch: false,
@@ -50,6 +50,8 @@ function load(userData) {
   if (out.scanScope !== 'roots') out.scanScope = 'all-fixed';
   if (!['auto', 'usn', 'everything', 'walk'].includes(out.scanEngine)) out.scanEngine = 'auto';
   out.autoScanOnLaunch = !!out.autoScanOnLaunch;
+  if (extra.hoverShowMs == null || Number(extra.hoverShowMs) === 280) out.hoverShowMs = DEFAULTS.hoverShowMs;
+  if (extra.hoverHideMs == null || Number(extra.hoverHideMs) === 200) out.hoverHideMs = DEFAULTS.hoverHideMs;
   return out;
 }
 

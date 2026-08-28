@@ -14,7 +14,7 @@
       <div class="brand">
         <span class="mark" aria-hidden="true"><img src="assets/icon.png" alt=""></span>
         HyperFramesSpace
-        <small>1.0.4 · <span data-i18n="brand.subtitle">HyperFrames 工作台</span></small>
+        <small>1.0.7 · <span data-i18n="brand.subtitle">HyperFrames 工作台</span></small>
       </div>
       <div class="global-search">
         <input id="global-search" type="search" data-i18n-placeholder="search.placeholder" placeholder="搜索项目、工作流、路径…  Ctrl+K" autocomplete="off">
@@ -391,18 +391,19 @@
               <label data-i18n="set.hoverShow">悬浮预览出现</label>
               <select id="set-hover-show">
                 <option value="0" data-i18n="set.hoverNow">立刻</option>
-                <option value="180">0.2 秒</option>
-                <option value="280" selected>0.3 秒</option>
-                <option value="500">0.5 秒</option>
+                <option value="300">0.3 秒</option>
+                <option value="450" selected>0.45 秒</option>
+                <option value="700">0.7 秒</option>
               </select>
+              <div class="side-hint" data-i18n="set.hoverCardHint">像 GitHub 信息卡：停稳才出现，鼠标可以进卡片里点选文字，离开后稍等再收起。</div>
             </div>
             <div class="field">
               <label data-i18n="set.hoverHide">悬浮预览收起</label>
               <select id="set-hover-hide">
                 <option value="0" data-i18n="set.hoverNow">立刻</option>
-                <option value="200" selected>0.2 秒</option>
+                <option value="150">0.15 秒</option>
+                <option value="280" selected>0.3 秒</option>
                 <option value="400">0.4 秒</option>
-                <option value="1000">1 秒</option>
               </select>
             </div>
             <div class="field">
@@ -491,6 +492,7 @@
       </div>
     </div>
   </div>
+  <div class="hover-bridge" id="hover-bridge" aria-hidden="true"></div>
   <div class="hover-preview" id="hover-preview">
     <div class="hover-preview-inner" id="hover-preview-inner"></div>
     <div class="hover-resizer" id="hover-resizer" title="拖动调整大小" data-i18n-title="hover.resize"></div>

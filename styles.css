@@ -719,44 +719,77 @@ h4 .add-btn { float: right; margin-top: -2px; }
 .is-dragging .card, .is-dragging .row { opacity: 0.7; }
 .hover-hint { margin-top: 8px; }
 
+.hover-bridge {
+  position: fixed;
+  z-index: 34;
+  display: none;
+  pointer-events: auto;
+  background: transparent;
+}
+.hover-bridge.is-on { display: block; }
 .hover-preview {
   position: fixed;
   z-index: 35;
-  width: 460px;
-  height: 318px;
-  background: #10141b;
-  border: 1px solid rgba(232, 163, 23, 0.22);
-  border-radius: 16px;
-  box-shadow: 0 18px 48px rgba(0,0,0,0.45);
+  width: 340px;
+  height: auto;
+  max-height: calc(100vh - 56px);
+  background: #12161e;
+  border: 1px solid rgba(232, 163, 23, 0.28);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.42);
   display: none;
-  overflow: hidden;
+  overflow: visible;
   pointer-events: auto;
   flex-direction: column;
 }
 .hover-preview.is-on { display: flex; }
+.hover-preview::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  width: 10px;
+  height: 10px;
+  background: #12161e;
+  border: 1px solid rgba(232, 163, 23, 0.28);
+  transform: rotate(45deg);
+  z-index: 2;
+}
+.hover-preview[data-side="right"]::before {
+  left: -6px;
+  border-right: 0;
+  border-top: 0;
+}
+.hover-preview[data-side="left"]::before {
+  right: -6px;
+  border-left: 0;
+  border-bottom: 0;
+}
 .hover-preview-inner {
-  flex: 1;
-  min-height: 0;
+  flex: 0 0 auto;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  border-radius: 12px;
+  background: #12161e;
 }
 .hover-resizer {
   position: absolute;
   right: 0; bottom: 0;
-  width: 18px; height: 18px;
-  cursor: nwse-resize;
+  width: 16px; height: 16px;
+  cursor: ew-resize;
+  z-index: 3;
   background:
     linear-gradient(135deg, transparent 0 50%, var(--amber) 50% 56%, transparent 56% 70%, var(--amber) 70% 76%, transparent 76%);
 }
 .hover-hero {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 0 0 auto;
+  width: 100%;
+  aspect-ratio: 16 / 9;
   background: #090b0f center/cover no-repeat;
 }
 .hover-body {
   flex: 0 0 auto;
-  padding: 8px 10px 10px;
+  padding: 10px 12px 12px;
   overflow: hidden;
 }
 .hover-body > b {
@@ -766,11 +799,15 @@ h4 .add-btn { float: right; margin-top: -2px; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  user-select: text;
+  cursor: text;
 }
 .hover-body > .meta {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  user-select: text;
+  cursor: text;
 }
 .hover-strip {
   display: grid;
