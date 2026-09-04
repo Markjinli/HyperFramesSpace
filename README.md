@@ -1,6 +1,6 @@
 # HyperFramesSpace
 
-Windows 上的 HyperFrames 工程工作台。把本机工程收成库，点进去就能预览、抽帧、出片，并在正确目录打开 Grok / Codex / Claude / Cursor。
+Windows 上的 HyperFrames 工程工作台。把本机工程收成库，点进去就能预览、抽帧、出片，并在正确目录里用 Grok Build / ChatGPT / Claude Code / Cursor 调整。
 
 当前版本是 **3.0.0**：原生 WPF 宿主 + SQLite 索引 + NTFS USN 扫描。界面仍是原来的工作台外观。
 
@@ -9,7 +9,7 @@ Windows 上的 HyperFrames 工程工作台。把本机工程收成库，点进�
 - 按 `hyperframes.json` 收本机工程；启动先读本地索引，扫描可增量
 - 项目库用封面、时长、画幅、CLI pin、BRIEF 编目
 - 选中工程后轻量预览（按视频比例缩放）
-- 一键在工程目录打开 Grok Build、ChatGPT、Codex CLI、Claude Code、Cursor
+- 一键在工程目录里用 Grok Build、ChatGPT、Codex CLI、Claude Code、Claude、Cursor 调整
 - 直接跑 HyperFrames 的 preview / lint / check / snapshot / render
 
 ## 运行

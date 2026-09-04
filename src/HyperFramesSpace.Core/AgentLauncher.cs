@@ -33,6 +33,20 @@ public static class AgentLauncher
             return StartConsole("Claude Code", projectDir, exe);
         }
 
+        if (a is "claude-app" or "claude-desktop")
+        {
+            var exe = FirstExisting(
+                Path.Combine(home, "AppData", "Local", "AnthropicClaude", "claude.exe"),
+                Path.Combine(home, "AppData", "Local", "Programs", "Claude", "Claude.exe"));
+            if (exe != null)
+            {
+                Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true, WorkingDirectory = projectDir });
+                return exe;
+            }
+            Process.Start(new ProcessStartInfo("claude://") { UseShellExecute = true });
+            return "claude://";
+        }
+
         if (a is "codex" or "codex-cli")
         {
             var js = Path.Combine(home, "AppData", "Roaming", "npm", "node_modules", "@openai", "codex", "bin", "codex.js");
@@ -52,6 +66,13 @@ public static class AgentLauncher
 
     public static string StartJob(string action, string projectDir, string pin)
     {
+        var cmd = BuildJobCommand(action, projectDir, pin);
+        StartConsole("HyperFrames " + action, projectDir, Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe", "/k", cmd);
+        return cmd;
+    }
+
+    public static string BuildJobCommand(string action, string projectDir, string pin)
+    {
         var pinSpec = string.IsNullOrWhiteSpace(pin) || pin == "unpinned" ? "" : "@" + pin;
         var quoted = Quote(projectDir);
         var rest = action switch
@@ -59,14 +80,12 @@ public static class AgentLauncher
             "preview" => $"preview {quoted}",
             "lint" => $"lint {quoted}",
             "check" => $"check {quoted}",
-            "snapshot" => $"snapshot {quoted} --frames 9",
+            "snapshot" or "snapshot-9" => $"snapshot {quoted} --frames 9",
             "render" => $"render {quoted} --quality high --output out.mp4",
             "render-draft" => $"render {quoted} --quality draft",
             _ => throw new InvalidOperationException("未知任务：" + action)
         };
-        var cmd = $"npx --yes hyperframes{pinSpec} {rest}";
-        StartConsole("HyperFrames " + action, projectDir, Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe", "/k", cmd);
-        return cmd;
+        return $"npx --yes hyperframes{pinSpec} {rest}";
     }
 
     static string StartConsole(string title, string cwd, string exe, params string[] args)
@@ -81,6 +100,13 @@ public static class AgentLauncher
             WorkingDirectory = cwd
         });
         return line;
+    }
+
+    static string? FirstExisting(params string[] paths)
+    {
+        foreach (var p in paths)
+            if (File.Exists(p)) return p;
+        return null;
     }
 
     static string Quote(string s) => "\"" + s.Replace("\"", "\"\"") + "\"";

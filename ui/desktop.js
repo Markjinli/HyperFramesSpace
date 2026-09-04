@@ -9,6 +9,8 @@
   var toastTimer = null;
   var scanning = false;
   var liveProjects = [];
+  var scanBaseline = {};
+  var AUTO_PREVIEW_CAP = 8;
 
   function toast(msg) {
     var el = document.getElementById('toast');
@@ -33,10 +35,17 @@
       scanIntervalSec: ui.state.scanIntervalSec,
       autoScanOnLaunch: !!ui.state.autoScanOnLaunch,
       scanScope: ui.state.scanScope || 'all-fixed',
-      scanEngine: ui.state.scanEngine || 'auto',
+      scanEngine: ui.state.scanEngine === 'everything' ? 'auto' : (ui.state.scanEngine || 'auto'),
       autoSnapshot: ui.state.autoSnapshot,
       catalogUrl: ui.state.catalogUrl
     });
+    if (window.__fsSettings) {
+      window.__fsSettings.autoSnapshot = !!ui.state.autoSnapshot;
+      window.__fsSettings.scanIntervalSec = ui.state.scanIntervalSec;
+      window.__fsSettings.autoScanOnLaunch = !!ui.state.autoScanOnLaunch;
+      window.__fsSettings.scanScope = ui.state.scanScope || 'all-fixed';
+      window.__fsSettings.scanEngine = ui.state.scanEngine === 'everything' ? 'auto' : (ui.state.scanEngine || 'auto');
+    }
   }
 
   var projectRenderTimer = 0;
@@ -115,8 +124,43 @@
       else if (ev.running && !ev.esPath) parts.push(t('diag.everythingNoEs'));
       else parts.push(t('diag.everythingOff'));
     }
-    if (pack.cancelled) parts.push(t('diag.scanCancelled'));
+    if (scanWasCancelled(pack)) parts.push(t('diag.scanCancelled'));
     return parts.join(' ');
+  }
+
+  function scanWasCancelled(pack) {
+    return !!(pack && (pack.cancelled || pack.error === 'cancelled'));
+  }
+
+  function projectPathKey(p) {
+    return String((p && p.path) || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+  }
+
+  function rememberScanBaseline(projects) {
+    scanBaseline = {};
+    (projects || []).forEach(function (p) {
+      var k = projectPathKey(p);
+      if (k) scanBaseline[k] = true;
+    });
+  }
+
+  function autoRegenEnabled() {
+    var ui = window.Framespace.getUi && window.Framespace.getUi();
+    if (ui && ui.state && ui.state.autoSnapshot != null) return !!ui.state.autoSnapshot;
+    return !!(window.__fsSettings && window.__fsSettings.autoSnapshot);
+  }
+
+  function queueNewProjectPreviews(rows) {
+    if (!api.runJob) return 0;
+    var list = (rows || []).filter(function (p) {
+      var k = projectPathKey(p);
+      return k && !scanBaseline[k] && !p.thumb;
+    });
+    if (!list.length) return 0;
+    list.slice(0, AUTO_PREVIEW_CAP).forEach(function (p) {
+      api.runJob({ action: 'snapshot', project: p, title: t('dyn.snap9', { name: p.name }) });
+    });
+    return Math.min(list.length, AUTO_PREVIEW_CAP);
   }
 
   async function refreshCatalog(stampScan) {
@@ -130,21 +174,20 @@
   function finishScan(pack) {
     scanning = false;
     setScanProgress(null);
-    refreshCatalog(pack && !pack.cancelled).then(function (rows) {
+    var cancelled = scanWasCancelled(pack);
+    refreshCatalog(!cancelled).then(function (rows) {
       if (window.__fsSettings) window.__fsSettings.lastEngine = pack && pack.engine;
       var usnInfo = (pack && pack.usn) || {};
       setDiagnosis({
-        scanNote: noteFromScan(Object.assign({}, pack, { total: (pack && pack.total) != null ? pack.total : rows.length })),
+        scanNote: noteFromScan(Object.assign({}, pack, { cancelled: cancelled, total: (pack && pack.total) != null ? pack.total : rows.length })),
         canFixScan: !rows.length,
-        canBuildIndex: !!(usnInfo.needsElevation || usnInfo.error === 'access-denied' || pack.engine === 'walk' || pack.engine === 'usn-cache')
+        canBuildIndex: !!(usnInfo.needsElevation || usnInfo.error === 'access-denied' || (pack && pack.engine === 'walk') || (pack && pack.engine === 'usn-cache'))
       });
-      var settings = window.__fsSettings || {};
-      if (pack && !pack.cancelled && settings.autoSnapshot) {
-        rows.filter(function (p) { return !p.thumb; }).slice(0, 3).forEach(function (p) {
-          api.runJob({ action: 'snapshot-9', project: p, title: t('dyn.snap9', { name: p.name }) });
-        });
-      }
-      toast(pack && pack.cancelled ? t('dyn.scanCancelled') : t('dyn.scanResult', { n: rows.length }));
+      var regen = 0;
+      if (!cancelled && autoRegenEnabled()) regen = queueNewProjectPreviews(rows);
+      var msg = cancelled ? t('dyn.scanCancelled') : t('dyn.scanResult', { n: rows.length });
+      if (!cancelled && regen > 0) msg = t('dyn.scanResultRegen', { n: rows.length, m: regen });
+      toast(msg);
       refreshProcesses();
     });
   }
@@ -152,6 +195,7 @@
   function startScan(reason) {
     if (scanning && reason !== 'force') return Promise.resolve();
     scanning = true;
+    rememberScanBaseline(liveProjects);
     setScanProgress({ active: true, phase: 'start', percent: 2, text: t('dyn.scanning') });
     toast(reason === 'timer' ? t('dyn.scanningTimer') : t('dyn.scanning'));
     return api.scanStart({ reason: reason || 'manual' });
@@ -343,7 +387,19 @@
           toast(t('dyn.openFail', { err: res.error || t('dyn.unknownErr') }));
           return null;
         }
-        var names = { grok: 'Grok Build', codex: 'Codex CLI', chatgpt: 'ChatGPT', 'chatgpt-app': 'ChatGPT', claude: 'Claude Code', cursor: 'Cursor' };
+        var names = {
+          grok: 'Grok Build',
+          'grok-build': 'Grok Build',
+          codex: 'Codex CLI',
+          'codex-cli': 'Codex CLI',
+          chatgpt: 'ChatGPT',
+          'chatgpt-app': 'ChatGPT',
+          claude: 'Claude Code',
+          'claude-code': 'Claude Code',
+          'claude-app': 'Claude',
+          'claude-desktop': 'Claude',
+          cursor: 'Cursor'
+        };
         toast(t('dyn.opened', { name: names[agent] || agent }));
         return res && res.command;
       } catch (err) {
@@ -427,7 +483,11 @@
     var scopeSel = document.getElementById('set-scan-scope');
     if (scopeSel) scopeSel.value = settings.scanScope === 'roots' ? 'roots' : 'all-fixed';
     var engineSel = document.getElementById('set-scan-engine');
-    if (engineSel) engineSel.value = settings.scanEngine || 'auto';
+    if (engineSel) {
+      var eng = settings.scanEngine || 'auto';
+      if (eng === 'everything') eng = 'auto';
+      engineSel.value = eng;
+    }
   }
 
   async function refreshUsnHint() {
@@ -497,7 +557,7 @@
       scanIntervalSec: settings.scanIntervalSec || 0,
       autoScanOnLaunch: !!settings.autoScanOnLaunch,
       scanScope: settings.scanScope || 'all-fixed',
-      scanEngine: settings.scanEngine || 'auto',
+      scanEngine: settings.scanEngine === 'everything' ? 'auto' : (settings.scanEngine || 'auto'),
       autoSnapshot: !!settings.autoSnapshot,
       catalogUrl: settings.catalogUrl,
       customCollections: settings.customCollections || [],

@@ -53,12 +53,12 @@ public static class UsnIndexer
     }
     sealed class Rec { public ulong Parent; public string Name = ""; }
 
-    public static UsnLocateResult Locate(string fileName = "hyperframes.json")
+    public static UsnLocateResult Locate(string fileName = "hyperframes.json", IReadOnlyList<string>? onlyDrives = null)
     {
         var dirs = new List<string>();
         var denied = false;
         var anyOk = false;
-        foreach (var root in ListFixedDrives())
+        foreach (var root in FilterDrives(ListFixedDrives(), onlyDrives))
         {
             var found = ScanVolume(root, fileName, out var err);
             if (err == "access-denied") denied = true;
@@ -235,6 +235,25 @@ public static class UsnIndexer
             if (root.Length >= 2 && GetDriveType(root) == DRIVE_FIXED) list.Add(root);
         }
         return list;
+    }
+
+    static List<string> FilterDrives(List<string> volumes, IReadOnlyList<string>? onlyDrives)
+    {
+        if (onlyDrives == null || onlyDrives.Count == 0) return volumes;
+        var want = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var r in onlyDrives)
+        {
+            if (string.IsNullOrWhiteSpace(r)) continue;
+            try
+            {
+                var full = Path.GetFullPath(r);
+                if (full.Length >= 2 && full[1] == ':')
+                    want.Add(char.ToUpperInvariant(full[0]) + ":\\");
+            }
+            catch { }
+        }
+        if (want.Count == 0) return volumes;
+        return volumes.Where(v => want.Contains(v)).ToList();
     }
 
     static ulong Key(ulong frn) => frn & 0x0000FFFFFFFFFFFFUL;

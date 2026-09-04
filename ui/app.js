@@ -1139,6 +1139,26 @@
     return null;
   }
 
+  function resolveWorkTarget(state, catalog) {
+    state = state || ui.state;
+    catalog = catalog || CATALOG;
+    var p = getProject(catalog, state && state.selectedId);
+    if (p && p.path) {
+      return { kind: 'project', path: p.path, name: p.name, pin: p.pin, project: p };
+    }
+    var folder = state && state.folder ? normalizePath(state.folder) : '';
+    if (folder) {
+      return { kind: 'folder', path: folder, name: folderDisplayName(folder), pin: '' };
+    }
+    return null;
+  }
+
+  function asLaunchProject(target) {
+    if (!target) return null;
+    if (target.project) return target.project;
+    return { path: target.path, name: target.name, pin: target.pin || '' };
+  }
+
   function mergeProject(detail) {
     if (!detail || !detail.id) return detail;
     DETAILS[detail.id] = detail;
@@ -1168,7 +1188,7 @@
     if (a === 'grok' || a === 'grok-build' || a === 'grokbuild') {
       return 'grok --cwd ' + path;
     }
-    if (a === 'codex') {
+    if (a === 'codex' || a === 'codex-cli') {
       return 'codex --cd ' + path;
     }
     if (a === 'cursor') {
@@ -1176,6 +1196,12 @@
     }
     if (a === 'claude' || a === 'claude-code') {
       return 'wt -d ' + path + ' claude';
+    }
+    if (a === 'claude-app' || a === 'claude-desktop') {
+      return 'claude://';
+    }
+    if (a === 'chatgpt' || a === 'chatgpt-app') {
+      return 'codex app ' + path;
     }
     if (a === 'code' || a === 'vscode' || a === 'vs-code') {
       return 'code ' + path;
@@ -1252,6 +1278,7 @@
     goLibrary: goLibrary,
     setView: setView,
     getProject: getProject,
+    resolveWorkTarget: resolveWorkTarget,
     mergeProject: mergeProject,
     virtualGridPlan: virtualGridPlan,
     virtualListPlan: virtualListPlan,
@@ -1647,15 +1674,7 @@
     setText('#stat-aspect', p.aspect);
     setText('#stat-pin', 'hyperframes@' + p.pin);
     setText('#stat-status', statusLabel(p.status));
-    setText('#insp-brief', p.brief);
     setText('#insp-brief-main', p.brief);
-    setText('#insp-path', p.path);
-    setText('#file-tree-name', p.name);
-
-    var cmdBox = $('#cmd-box');
-    if (cmdBox) {
-      cmdBox.textContent = ui.state.lastCommand || t('insp.cmdFallback');
-    }
 
     var clips = clipsFor(p);
     var tl = $('#timeline');
@@ -1713,6 +1732,29 @@
     if (el) el.textContent = text;
   }
 
+  function renderInspector() {
+    var target = resolveWorkTarget(ui.state, CATALOG);
+    var cmdBox = $('#cmd-box');
+    if (cmdBox) cmdBox.textContent = ui.state.lastCommand || t('insp.cmdFallback');
+    if (!target) {
+      setText('#insp-target-h', t('insp.project'));
+      setText('#file-tree-name', t('insp.none'));
+      setText('#insp-brief', t('insp.brief'));
+      setText('#insp-path', '—');
+      return;
+    }
+    setText('#insp-target-h', target.kind === 'folder' ? t('insp.folder') : t('insp.project'));
+    setText('#file-tree-name', target.name);
+    setText('#insp-path', target.path);
+    if (target.kind === 'folder') {
+      var n = projectsUnderFolder(CATALOG, target.path).length;
+      setText('#insp-brief', t('insp.folderBrief', { name: target.name, n: n }));
+      return;
+    }
+    var p = target.project;
+    setText('#insp-brief', (p && p.brief) || t('insp.brief'));
+  }
+
   function renderChrome() {
     var view = ui.state.view;
     $all('.view').forEach(function (v) {
@@ -1733,7 +1775,8 @@
     var search = $('#global-search');
     if (search && search.value !== ui.state.query) search.value = ui.state.query;
     setText('#status-view', viewName(view));
-    setText('#status-sel', ui.state.selectedId || t('dyn.noSel'));
+    var target = resolveWorkTarget(ui.state, CATALOG);
+    setText('#status-sel', target ? target.name : t('dyn.noSel'));
     setText('#status-count', t('dyn.inLib', { n: CATALOG.length }));
     var orphanN = listOrphans(ui.state.processes).length;
     setText('#status-proc', orphanN ? t('dyn.orphanN', { n: orphanN }) : t('dyn.noOrphan'));
@@ -1751,7 +1794,17 @@
           var bits = [];
           if (progress.phase === 'hydrate') bits.push(t('scan.phaseHydrate'));
           else bits.push(t('scan.phaseLocate'));
-          if (progress.engine) bits.push(progress.engine === 'everything' ? t('scan.engineEverything') : t('scan.engineWalk'));
+          if (progress.engine) {
+            var engineKey = {
+              everything: 'scan.engineEverything',
+              usn: 'scan.engineUsn',
+              'usn-cache': 'scan.engineUsnCache',
+              'usn+walk': 'scan.engineUsn',
+              walk: 'scan.engineWalk',
+              auto: 'scan.engineAuto'
+            }[progress.engine];
+            bits.push(engineKey ? t(engineKey) : progress.engine);
+          }
           if (progress.found) bits.push(t('scan.foundN', { n: progress.found }));
           else if (progress.total) bits.push(progress.index + '/' + progress.total);
           if (progress.current) bits.push(String(progress.current).slice(0, 42));
@@ -1788,7 +1841,7 @@
     var scopeSel = $('#set-scan-scope');
     if (scopeSel) scopeSel.value = ui.state.scanScope === 'roots' ? 'roots' : 'all-fixed';
     var engineSel = $('#set-scan-engine');
-    if (engineSel) engineSel.value = ui.state.scanEngine || 'auto';
+    if (engineSel) engineSel.value = ui.state.scanEngine === 'everything' ? 'auto' : (ui.state.scanEngine || 'auto');
     renderOccupancy();
   }
 
@@ -2157,16 +2210,11 @@
       return;
     }
     ui.state.lastScanAt = Date.now();
-    var cmds = CATALOG.map(function (p) {
-      return buildSnapshotCommand(p, { count: 9 });
-    });
     ui.state.lastCommand = ui.state.autoSnapshot
-      ? cmds.slice(0, 2).join('\n') + '\n# …共 ' + CATALOG.length + ' 个工程 --frames 9'
+      ? '# scan; regenerate previews for newly found projects only'
       : '# scan only';
     render();
-    toast(reason === 'timer'
-      ? t('dyn.timerDone') + (ui.state.autoSnapshot ? t('dyn.snapped') : '')
-      : t('dyn.scanDone') + (ui.state.autoSnapshot ? t('dyn.snapped') : ''));
+    toast(reason === 'timer' ? t('dyn.timerDone') : t('dyn.scanDone'));
   }
 
   function armScanTimer() {
@@ -2201,6 +2249,7 @@
     renderChrome();
     renderLibrary();
     renderProject();
+    renderInspector();
     renderProcesses();
     renderSkills();
     renderJobs();
@@ -2229,11 +2278,12 @@
   }
 
   function runAgent(agent) {
-    var p = getProject(CATALOG, ui.state.selectedId);
-    if (!p) {
+    var target = resolveWorkTarget(ui.state, CATALOG);
+    if (!target) {
       toast(t('dyn.pickFirst'));
       return;
     }
+    var p = asLaunchProject(target);
     var cmd = buildAgentCommand(agent, p);
     ui.state.lastCommand = cmd;
     if (global.FramespaceDesktop && global.FramespaceDesktop.runAgent) {
@@ -2241,17 +2291,31 @@
       render();
       return;
     }
+    var agentTitles = {
+      claude: 'dyn.openClaude',
+      'claude-code': 'dyn.openClaude',
+      'claude-app': 'dyn.openClaudeApp',
+      'claude-desktop': 'dyn.openClaudeApp',
+      cursor: 'dyn.openCursor',
+      chatgpt: 'dyn.openChatgpt',
+      'chatgpt-app': 'dyn.openChatgpt',
+      grok: 'dyn.openGrok',
+      'grok-build': 'dyn.openGrok',
+      codex: 'dyn.openCodex',
+      'codex-cli': 'dyn.openCodex'
+    };
     ui.state.agentModal = {
       agent: agent,
       command: cmd,
-      title: agent === 'claude' ? t('dyn.openClaude') : (agent === 'cursor' ? t('dyn.openCursor') : (agent.indexOf('chatgpt') === 0 ? t('dyn.openChatgpt') : t('dyn.openGrok'))),
-      note: t('dyn.agentNote')
+      title: t(agentTitles[agent] || 'dyn.openGrok'),
+      note: t(target.kind === 'folder' ? 'dyn.agentNoteFolder' : 'dyn.agentNote')
     };
     render();
   }
 
   function runCli(action) {
-    var p = getProject(CATALOG, ui.state.selectedId);
+    var target = resolveWorkTarget(ui.state, CATALOG);
+    var p = asLaunchProject(target);
     if (action !== 'init' && action !== 'doctor' && !p) {
       toast(t('dyn.pickCli'));
       return;
@@ -2387,6 +2451,7 @@
         ui.state.folder = folderBtn.getAttribute('data-folder');
         ui.state.collection = 'all';
         ui.state.view = 'library';
+        ui.state.selectedId = null;
         render();
         return;
       }
@@ -2635,8 +2700,7 @@
       if (t.closest('[data-run-modal]')) {
         var modal = ui.state.agentModal;
         if (modal && global.FramespaceDesktop && global.FramespaceDesktop.runAgent) {
-          var proj = getProject(CATALOG, ui.state.selectedId);
-          global.FramespaceDesktop.runAgent(modal.agent, proj);
+          global.FramespaceDesktop.runAgent(modal.agent, asLaunchProject(resolveWorkTarget(ui.state, CATALOG)));
         }
         ui.state.agentModal = null;
         render();
@@ -2745,7 +2809,7 @@
     var engineSel = $('#set-scan-engine', root);
     if (engineSel) {
       engineSel.addEventListener('change', function () {
-        ui.state.scanEngine = engineSel.value || 'auto';
+        ui.state.scanEngine = engineSel.value === 'everything' ? 'auto' : (engineSel.value || 'auto');
         if (global.FramespaceDesktop && global.FramespaceDesktop.persist) global.FramespaceDesktop.persist();
       });
     }

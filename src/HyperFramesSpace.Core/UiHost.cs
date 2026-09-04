@@ -255,7 +255,7 @@ public sealed class UiHost : IDisposable
         {
             try
             {
-                _lastResult = _index.Refresh(progress, ct);
+                _lastResult = _index.Refresh(ScanRequest.FromSettings(SettingsStore.Load()), progress, ct);
             }
             catch (OperationCanceledException)
             {

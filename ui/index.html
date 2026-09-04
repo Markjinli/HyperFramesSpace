@@ -170,10 +170,11 @@
                 <div class="sub" data-i18n="project.sub">对着这个 HyperFrames 工程做事 · 不替代 Studio</div>
               </div>
               <div class="grow"></div>
-              <button class="btn-amber" type="button" data-agent="grok" id="btn-open-grok" data-i18n="agent.grok">打开 Grok Build</button>
-              <button class="btn-teal" type="button" data-agent="chatgpt-app" id="btn-open-chatgpt" data-i18n="agent.chatgpt">打开 ChatGPT</button>
-              <button class="btn" type="button" data-agent="codex" id="btn-open-codex" data-i18n="agent.codex">打开 Codex CLI</button>
-              <button class="btn" type="button" data-agent="claude" id="btn-open-claude" data-i18n="agent.claude">打开 Claude Code</button>
+              <button class="btn-amber" type="button" data-agent="grok" id="btn-open-grok" data-i18n="agent.grok">在 Grok Build 中调整</button>
+              <button class="btn-teal" type="button" data-agent="chatgpt-app" id="btn-open-chatgpt" data-i18n="agent.chatgpt">在 ChatGPT 中调整</button>
+              <button class="btn" type="button" data-agent="codex" id="btn-open-codex" data-i18n="agent.codex">在 Codex CLI 中调整</button>
+              <button class="btn" type="button" data-agent="claude" id="btn-open-claude" data-i18n="agent.claude">在 Claude Code 中调整</button>
+              <button class="btn" type="button" data-agent="claude-app" id="btn-open-claude-app" data-i18n="agent.claudeApp">在 Claude 中调整</button>
             </div>
             <div class="live-preview" id="live-preview">
               <div class="live-preview-h">
@@ -224,7 +225,7 @@
             <div class="tab-panel is-on" id="tab-overview">
               <div class="brief">
                 <div class="kicker">BRIEF.md</div>
-                <p id="insp-brief-main" data-i18n="brief.fallback">从 BRIEF 读出的意图会显示在这里。改片请用右侧「打开 Grok Build / ChatGPT」，cwd 会落到本工程。</p>
+                <p id="insp-brief-main" data-i18n="brief.fallback">从 BRIEF 读出的意图会显示在这里。改片请用右侧「在 Grok Build / ChatGPT 中调整」，cwd 会落到本工程。</p>
               </div>
             </div>
             <div class="tab-panel" id="tab-commands">
@@ -300,17 +301,17 @@
         <section class="view" data-view="plan" id="view-plan">
           <div class="plan">
             <h2 data-i18n="plan.h2">功能规划</h2>
-            <p data-i18n="plan.p1" data-i18n-html="1">完整说明见同目录 <code>FEATURES.md</code>。桌面版已经把扫描、打开 agent、CLI 任务做成可执行：</p>
+            <p data-i18n="plan.p1" data-i18n-html="1">完整说明见同目录 <code>FEATURES.md</code>。桌面版已经把扫描、在工具中调整、CLI 任务做成可执行：</p>
             <h3 data-i18n="plan.h3a">1. 项目库</h3>
             <p data-i18n="plan.pa" data-i18n-html="1">扫描带 <code>hyperframes.json</code> 的目录，按 BRIEF / pin / 工作流编目。左侧是自定义项目（可新建、可从全部拖入）和文件夹树（可 pin、点击后摊平子目录）。</p>
             <h3 data-i18n="plan.h3b">2. 调整修改</h3>
             <p data-i18n="plan.pb">选中工程后进入工作台：BRIEF、时长画幅、只读时间轴、快照、文件。动作条生成 preview / lint / check / snapshot / render，不内置运动编辑器。</p>
-            <h3 data-i18n="plan.h3c">3. 打开 Grok Build / ChatGPT</h3>
-            <p data-i18n="plan.pc" data-i18n-html="1">工作目录必须是该工程根。<code>grok --cwd "&lt;path&gt;"</code> 与 <code>codex app "&lt;path&gt;"</code>（ChatGPT 桌面端）。确认后会真正打开 agent，工作目录落在工程根。</p>
+            <h3 data-i18n="plan.h3c">3. 在 Grok Build / ChatGPT 中调整</h3>
+            <p data-i18n="plan.pc" data-i18n-html="1">工作目录必须是该工程根。CLI：Grok Build（<code>grok --cwd "&lt;path&gt;"</code>）、Codex CLI、Claude Code。桌面 UI：ChatGPT、Claude、Cursor。确认后会进入对应工具调整，工作目录落在工程根。</p>
             <h3 data-i18n="plan.h3d">4. CLI 小功能</h3>
             <p data-i18n="plan.pd">preview、lint、check、snapshot、render、doctor、init，以及 upgrade 探针与 compositions 列表。全部走同一套命令构造器。</p>
             <h3 data-i18n="plan.h3e">5. 封面 / 扫描 / 进程</h3>
-            <p data-i18n="plan.pe">扫描后按时长等距抽 9 帧（含第一帧和最后一帧），封面可切单图 / 四宫格 / 九宫格。悬停卡片看大图。右侧常驻 HyperFrames 占用（CPU / 内存 / 显卡百分比），旁边一键清理和暂停渲染。</p>
+            <p data-i18n="plan.pe">封面用工程预览图，可切单图 / 四宫格 / 九宫格。设置里可选：扫描到新项目后自动重新生成预览图。悬停卡片看大图。右侧常驻 HyperFrames 占用（CPU / 内存 / 显卡百分比），旁边一键清理和暂停渲染。</p>
           </div>
         </section>
 
@@ -331,6 +332,7 @@
                 <option value="chatgpt-app" data-i18n="set.chatgptDesktop">ChatGPT 桌面</option>
                 <option value="codex">Codex CLI</option>
                 <option value="claude">Claude Code</option>
+                <option value="claude-app" data-i18n="set.claudeDesktop">Claude 桌面</option>
                 <option value="cursor">Cursor</option>
               </select>
             </div>
@@ -363,7 +365,7 @@
                 <option value="auto" selected data-i18n="set.engineAuto">自动（NTFS 系统索引，没有再遍历）</option>
                 <option value="usn" data-i18n="set.engineUsn">NTFS 系统索引</option>
                 <option value="walk" data-i18n="set.engineWalk">文件夹遍历</option>
-                <option value="everything" data-i18n="set.engineEverything">Everything（可选）</option>
+                <option value="everything" hidden data-i18n="set.engineEverything">Everything（可选）</option>
               </select>
               <div class="side-hint" id="usn-status" data-i18n="set.usnHint">第一次建立索引需要管理员权限，之后扫描会很快。</div>
               <button type="button" class="btn-amber" id="btn-build-index" data-build-index="1" data-i18n="set.buildIndex">建立系统索引</button>
@@ -418,7 +420,8 @@
               </select>
             </div>
             <div class="field">
-              <label class="check-line"><input id="set-auto-snapshot" type="checkbox"> <span data-i18n="set.autoSnapshot">扫描后自动等距抽 9 帧（含首尾）</span></label>
+              <label class="check-line"><input id="set-auto-snapshot" type="checkbox"> <span data-i18n="set.autoSnapshot">扫描到新项目后，自动重新生成预览图</span></label>
+              <div class="side-hint" data-i18n="set.autoSnapshotHint">只处理这次新发现、还没有预览图的工程。关闭后扫描只入库，预览图请手动生成。</div>
             </div>
             <div class="field">
               <label data-i18n="set.catalog">热门 Skill catalog（GitHub raw catalog.json）</label>
@@ -440,19 +443,20 @@
             <button type="button" class="btn" data-pause-render="1" id="btn-pause-render" data-i18n="chip.pause">暂停渲染</button>
           </div>
         </div>
-        <div class="pane-h" data-i18n="insp.project">当前工程</div>
+        <div class="pane-h" id="insp-target-h" data-i18n="insp.project">当前工程</div>
         <div class="brief-mini">
           <div class="kicker" id="file-tree-name" data-i18n="insp.none">未选中</div>
-          <p id="insp-brief" data-i18n="insp.brief">在项目库点一张卡片。右侧会给出 Grok / ChatGPT / Claude Code / Cursor 启动口，命令会带上工程路径。</p>
+          <p id="insp-brief" data-i18n="insp.brief">在项目库点一张卡片，或在左侧文件夹里点一个目录。右侧会给出 Grok Build、ChatGPT、Codex CLI、Claude Code、Claude、Cursor，用来在对应工具里调整，命令会带上工程或文件夹路径。</p>
           <div class="path" id="insp-path">—</div>
         </div>
-        <div class="pane-h" data-i18n="insp.openIn">在项目中打开</div>
+        <div class="pane-h" data-i18n="insp.openIn">在工具中调整</div>
         <div class="agent-stack">
-          <button class="btn-amber" type="button" data-agent="grok" data-i18n="agent.grok">打开 Grok Build</button>
-          <button class="btn-teal" type="button" data-agent="chatgpt-app" data-i18n="agent.chatgpt">打开 ChatGPT</button>
-          <button class="btn" type="button" data-agent="codex" data-i18n="agent.codex">打开 Codex CLI</button>
-          <button class="btn" type="button" data-agent="claude" data-i18n="agent.claude">打开 Claude Code</button>
-          <button class="btn" type="button" data-agent="cursor" data-i18n="agent.cursor">打开 Cursor</button>
+          <button class="btn-amber" type="button" data-agent="grok" data-i18n="agent.grok">在 Grok Build 中调整</button>
+          <button class="btn-teal" type="button" data-agent="chatgpt-app" data-i18n="agent.chatgpt">在 ChatGPT 中调整</button>
+          <button class="btn" type="button" data-agent="codex" data-i18n="agent.codex">在 Codex CLI 中调整</button>
+          <button class="btn" type="button" data-agent="claude" data-i18n="agent.claude">在 Claude Code 中调整</button>
+          <button class="btn" type="button" data-agent="claude-app" data-i18n="agent.claudeApp">在 Claude 中调整</button>
+          <button class="btn" type="button" data-agent="cursor" data-i18n="agent.cursor">在 Cursor 中调整</button>
           <button class="btn-ghost" type="button" data-cli="preview" data-i18n="insp.studio">Studio 预览</button>
         </div>
         <div class="pane-h" data-i18n="insp.recent">最近命令</div>
@@ -483,13 +487,13 @@
 
   <div class="modal-back" id="agent-modal">
     <div class="modal" role="dialog" aria-labelledby="agent-modal-title">
-      <h3 id="agent-modal-title" data-i18n="modal.agent">打开 agent</h3>
-      <p id="agent-modal-copy" data-i18n="modal.copy">将在选中的 HyperFrames 工程目录启动。</p>
+      <h3 id="agent-modal-title" data-i18n="modal.agent">在工具中调整</h3>
+      <p id="agent-modal-copy" data-i18n="modal.copy">将在选中的 HyperFrames 工程目录里打开对应工具，便于调整。</p>
       <pre id="agent-modal-cmd"></pre>
       <div class="modal-actions">
         <button class="btn-ghost" type="button" data-close-modal data-i18n="modal.cancel">取消</button>
         <button class="btn" type="button" data-copy-cmd data-i18n="modal.copyCmd">复制命令</button>
-        <button class="btn-amber" type="button" data-run-modal data-i18n="modal.open">打开</button>
+        <button class="btn-amber" type="button" data-run-modal data-i18n="modal.open">去调整</button>
       </div>
     </div>
   </div>
